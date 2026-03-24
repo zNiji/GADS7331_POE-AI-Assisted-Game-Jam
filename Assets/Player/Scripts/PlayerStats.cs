@@ -99,4 +99,17 @@ public class PlayerStats : MonoBehaviour
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnOxygenChanged?.Invoke(currentOxygen, maxOxygen);
     }
+
+    public void AddMaxHealth(float amount, bool healByAmount)
+    {
+        if (amount <= 0f)
+        {
+            return;
+        }
+
+        maxHealth += amount;
+        currentHealth = healByAmount ? currentHealth + amount : currentHealth;
+        currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
 }

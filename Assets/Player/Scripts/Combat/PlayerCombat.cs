@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class PlayerCombat : MonoBehaviour
 {
@@ -10,6 +10,12 @@ public class PlayerCombat : MonoBehaviour
     [SerializeField] private float attackCooldown = 0.25f;
 
     private float nextAttackTime;
+    private PlayerUpgradeEffects upgradeEffects;
+
+    private void Awake()
+    {
+        upgradeEffects = GetComponentInParent<PlayerUpgradeEffects>();
+    }
 
     private void Update()
     {
@@ -44,7 +50,8 @@ public class PlayerCombat : MonoBehaviour
             IDamageable damageable = hit.GetComponentInParent<IDamageable>();
             if (damageable != null)
             {
-                damageable.TakeDamage(damage);
+                int finalDamage = damage + (upgradeEffects != null ? upgradeEffects.BonusDamage : 0);
+                damageable.TakeDamage(finalDamage);
             }
         }
     }

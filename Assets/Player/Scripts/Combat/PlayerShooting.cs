@@ -13,9 +13,12 @@ public class PlayerShooting : MonoBehaviour
     [SerializeField] private int bulletDamage = 1;
 
     private float nextShotTime;
+    private PlayerUpgradeEffects upgradeEffects;
 
     private void Awake()
     {
+        upgradeEffects = GetComponentInParent<PlayerUpgradeEffects>();
+
         if (playerSprite == null)
         {
             playerSprite = GetComponentInChildren<SpriteRenderer>();
@@ -46,9 +49,10 @@ public class PlayerShooting : MonoBehaviour
 
         float direction = GetFacingDirectionSign();
         Vector2 shootDirection = new Vector2(direction, 0f);
+        int finalDamage = bulletDamage + (upgradeEffects != null ? upgradeEffects.BonusDamage : 0);
 
         Bullet spawnedBullet = Instantiate(bulletPrefab, firePoint.position, Quaternion.identity);
-        spawnedBullet.Initialize(shootDirection, bulletSpeed, bulletDamage, gameObject);
+        spawnedBullet.Initialize(shootDirection, bulletSpeed, finalDamage, gameObject);
     }
 
     private float GetFacingDirectionSign()

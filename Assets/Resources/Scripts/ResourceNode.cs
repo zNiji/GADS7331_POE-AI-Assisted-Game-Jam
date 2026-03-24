@@ -17,6 +17,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
     private int currentHealth;
     private bool playerInRange;
     private Collider2D triggerCollider;
+    private PlayerUpgradeEffects activeMinerUpgrades;
 
     public string ResourceId => resourceId;
 
@@ -35,7 +36,8 @@ public class ResourceNode : MonoBehaviour, IRunResettable
 
         if (Input.GetKeyDown(mineKey))
         {
-            Mine(1);
+            int minePower = 1 + (activeMinerUpgrades != null ? activeMinerUpgrades.BonusMiningPower : 0);
+            Mine(minePower);
         }
     }
 
@@ -73,6 +75,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
 
         playerInRange = true;
+        activeMinerUpgrades = other.GetComponentInParent<PlayerUpgradeEffects>();
         if (HUDController.Instance != null)
         {
             HUDController.Instance.ShowPrompt(promptMessage);
@@ -87,6 +90,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
 
         playerInRange = false;
+        activeMinerUpgrades = null;
         if (HUDController.Instance != null)
         {
             HUDController.Instance.ShowPrompt(string.Empty);
@@ -105,6 +109,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
     {
         currentHealth = maxHealth;
         playerInRange = false;
+        activeMinerUpgrades = null;
         gameObject.SetActive(true);
 
         if (triggerCollider != null)
