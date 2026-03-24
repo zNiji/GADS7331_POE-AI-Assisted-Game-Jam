@@ -112,4 +112,15 @@ public class InventorySystem : MonoBehaviour
     {
         return new Dictionary<string, int>(items);
     }
+
+    public void ClearRunResources()
+    {
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        items.Clear();
+        OnInventoryChanged?.Invoke();
+    }
 }

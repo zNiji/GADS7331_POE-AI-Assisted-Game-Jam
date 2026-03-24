@@ -12,9 +12,11 @@ public class PlayerStats : MonoBehaviour
 
     private float currentHealth;
     private float currentOxygen;
+    private bool isDead;
 
     public event Action<float, float> OnHealthChanged;
     public event Action<float, float> OnOxygenChanged;
+    public event Action OnDied;
 
     public float CurrentHealth => currentHealth;
     public float MaxHealth => maxHealth;
@@ -25,6 +27,7 @@ public class PlayerStats : MonoBehaviour
     {
         currentHealth = maxHealth;
         currentOxygen = maxOxygen;
+        isDead = false;
     }
 
     private void Start()
@@ -40,13 +43,19 @@ public class PlayerStats : MonoBehaviour
 
     public void TakeDamage(float amount)
     {
-        if (amount <= 0f)
+        if (amount <= 0f || isDead)
         {
             return;
         }
 
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+        if (currentHealth <= 0f)
+        {
+            isDead = true;
+            OnDied?.Invoke();
+        }
     }
 
     public void Heal(float amount)
@@ -73,12 +82,21 @@ public class PlayerStats : MonoBehaviour
 
     private void DrainOxygen(float amount)
     {
-        if (amount <= 0f || currentOxygen <= 0f)
+        if (amount <= 0f || currentOxygen <= 0f || isDead)
         {
             return;
         }
 
         currentOxygen = Mathf.Max(0f, currentOxygen - amount);
+        OnOxygenChanged?.Invoke(currentOxygen, maxOxygen);
+    }
+
+    public void ResetForNewRun()
+    {
+        isDead = false;
+        currentHealth = maxHealth;
+        currentOxygen = maxOxygen;
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnOxygenChanged?.Invoke(currentOxygen, maxOxygen);
     }
 }

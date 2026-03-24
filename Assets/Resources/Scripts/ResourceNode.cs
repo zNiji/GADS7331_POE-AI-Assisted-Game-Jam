@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Collider2D))]
-public class ResourceNode : MonoBehaviour
+public class ResourceNode : MonoBehaviour, IRunResettable
 {
     [Header("Resource Settings")]
     [SerializeField] private string resourceId = "Iron";
@@ -16,12 +16,14 @@ public class ResourceNode : MonoBehaviour
 
     private int currentHealth;
     private bool playerInRange;
+    private Collider2D triggerCollider;
 
     public string ResourceId => resourceId;
 
     private void Awake()
     {
         currentHealth = maxHealth;
+        triggerCollider = GetComponent<Collider2D>();
     }
 
     private void Update()
@@ -48,7 +50,7 @@ public class ResourceNode : MonoBehaviour
         if (currentHealth <= 0)
         {
             DropResource();
-            Destroy(gameObject);
+            gameObject.SetActive(false);
         }
     }
 
@@ -96,6 +98,18 @@ public class ResourceNode : MonoBehaviour
         if (playerInRange && HUDController.Instance != null)
         {
             HUDController.Instance.ShowPrompt(string.Empty);
+        }
+    }
+
+    public void ResetForNewRun()
+    {
+        currentHealth = maxHealth;
+        playerInRange = false;
+        gameObject.SetActive(true);
+
+        if (triggerCollider != null)
+        {
+            triggerCollider.enabled = true;
         }
     }
 
