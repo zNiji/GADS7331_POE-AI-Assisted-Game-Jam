@@ -8,10 +8,12 @@ public class GameManager : MonoBehaviour
     [SerializeField] private PlayerStats playerStats;
     [SerializeField] private Transform playerTransform;
     [SerializeField] private Transform playerSpawnPoint;
+    [SerializeField] private DeathUpgradeMenuUI deathUpgradeMenu;
 
     public bool IsPaused { get; private set; }
     private Vector3 cachedPlayerSpawnPosition;
     private IRunResettable[] runResettables;
+    private bool waitingForDeathUpgradeSelection;
 
     private void Awake()
     {
@@ -53,6 +55,11 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        if (waitingForDeathUpgradeSelection)
+        {
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             TogglePause();
@@ -72,12 +79,36 @@ public class GameManager : MonoBehaviour
 
     private void HandlePlayerDied()
     {
+        if (deathUpgradeMenu == null)
+        {
+            ResolveReferences();
+        }
+
+        waitingForDeathUpgradeSelection = true;
+        SetPause(true);
+
+        if (deathUpgradeMenu != null)
+        {
+            deathUpgradeMenu.Show(this);
+            return;
+        }
+
+        CompleteDeathUpgradeAndRespawn();
+    }
+
+    public void CompleteDeathUpgradeAndRespawn()
+    {
+        waitingForDeathUpgradeSelection = false;
         ResetRun();
     }
 
     public void ResetRun()
     {
         SetPause(false);
+        if (deathUpgradeMenu != null)
+        {
+            deathUpgradeMenu.HideImmediate();
+        }
 
         if (InventorySystem.Instance != null)
         {
@@ -143,6 +174,11 @@ public class GameManager : MonoBehaviour
         if (playerTransform == null && playerStats != null)
         {
             playerTransform = playerStats.transform;
+        }
+
+        if (deathUpgradeMenu == null)
+        {
+            deathUpgradeMenu = FindAnyObjectByType<DeathUpgradeMenuUI>();
         }
     }
 

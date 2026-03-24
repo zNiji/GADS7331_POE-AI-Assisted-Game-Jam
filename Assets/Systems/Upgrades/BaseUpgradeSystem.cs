@@ -96,6 +96,19 @@ public class BaseUpgradeSystem : MonoBehaviour
         return true;
     }
 
+    public bool TryApplyFreeUpgrade(UpgradeDefinition definition)
+    {
+        if (definition == null || IsMaxLevel(definition) || PermanentUpgradeSystem.Instance == null)
+        {
+            return false;
+        }
+
+        PermanentUpgradeSystem.Instance.AddUpgradeLevel(definition.upgradeId, 1);
+        ReapplyAllUpgradeEffects(false);
+        OnUpgradesChanged?.Invoke();
+        return true;
+    }
+
     public void ReapplyAllUpgradeEffects(bool healToFull)
     {
         ResolveReferences();

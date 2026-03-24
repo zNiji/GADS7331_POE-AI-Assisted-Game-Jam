@@ -32,13 +32,18 @@ public class CameraShake2D : MonoBehaviour
 
     public void Shake(float duration = -1f, float magnitude = -1f)
     {
+        if (shakeTarget == null)
+        {
+            shakeTarget = transform;
+        }
+
         float finalDuration = duration > 0f ? duration : defaultDuration;
         float finalMagnitude = magnitude > 0f ? magnitude : defaultMagnitude;
+        originalLocalPosition = shakeTarget.localPosition;
 
         if (activeShake != null)
         {
             StopCoroutine(activeShake);
-            shakeTarget.localPosition = originalLocalPosition;
         }
 
         activeShake = StartCoroutine(ShakeRoutine(finalDuration, finalMagnitude));

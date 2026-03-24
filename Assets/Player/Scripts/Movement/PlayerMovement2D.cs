@@ -36,8 +36,19 @@ public class PlayerMovement2D : MonoBehaviour
     private void Update()
     {
         moveInputRaw = Input.GetAxisRaw("Horizontal");
+        if (Mathf.Abs(moveInputRaw) < 0.01f)
+        {
+            if (Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.LeftArrow))
+            {
+                moveInputRaw = -1f;
+            }
+            else if (Input.GetKey(KeyCode.D) || Input.GetKey(KeyCode.RightArrow))
+            {
+                moveInputRaw = 1f;
+            }
+        }
 
-        if (Input.GetButtonDown("Jump"))
+        if (Input.GetButtonDown("Jump") || Input.GetKeyDown(KeyCode.Space))
         {
             jumpPressed = true;
         }
@@ -99,6 +110,12 @@ public class PlayerMovement2D : MonoBehaviour
         if (groundCheck == null)
         {
             isGrounded = false;
+            return;
+        }
+
+        if (groundLayer.value == 0)
+        {
+            isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius) != null;
             return;
         }
 
