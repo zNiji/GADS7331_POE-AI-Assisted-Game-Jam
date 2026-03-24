@@ -126,6 +126,11 @@ public class GameManager : MonoBehaviour
         {
             BaseUpgradeSystem.Instance.ReapplyAllUpgradeEffects(true);
         }
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetExtractionStatus(string.Empty);
+        }
     }
 
     private void ResolveReferences()

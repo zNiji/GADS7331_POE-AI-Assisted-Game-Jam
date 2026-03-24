@@ -21,6 +21,7 @@ public class HUDController : MonoBehaviour
     [Header("Context UI")]
     [SerializeField] private Text biomeLabel;
     [SerializeField] private Text promptText;
+    [SerializeField] private Text extractionStatusText;
     [SerializeField] private GameObject pausePanel;
 
     private void OnEnable()
@@ -50,6 +51,7 @@ public class HUDController : MonoBehaviour
 
         RefreshResources();
         ShowPrompt(string.Empty);
+        SetExtractionStatus(string.Empty);
         SetBiome("Unknown Sector");
         SetPauseVisible(false);
     }
@@ -100,6 +102,17 @@ public class HUDController : MonoBehaviour
         {
             pausePanel.SetActive(isVisible);
         }
+    }
+
+    public void SetExtractionStatus(string message)
+    {
+        if (extractionStatusText == null)
+        {
+            return;
+        }
+
+        extractionStatusText.text = message;
+        extractionStatusText.enabled = !string.IsNullOrWhiteSpace(message);
     }
 
     public void RefreshResources()
