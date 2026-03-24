@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -83,6 +83,21 @@ public class InventorySystem : MonoBehaviour
         return true;
     }
 
+    public bool SpendResource(string itemId, int amount = 1)
+    {
+        return RemoveItem(itemId, amount);
+    }
+
+    public bool HasResource(string itemId, int minimumAmount = 1)
+    {
+        if (string.IsNullOrWhiteSpace(itemId) || minimumAmount <= 0)
+        {
+            return false;
+        }
+
+        return GetCount(itemId) >= minimumAmount;
+    }
+
     public int GetCount(string itemId)
     {
         return items.TryGetValue(itemId, out int count) ? count : 0;
@@ -91,5 +106,10 @@ public class InventorySystem : MonoBehaviour
     public IReadOnlyDictionary<string, int> GetItems()
     {
         return items;
+    }
+
+    public Dictionary<string, int> GetSnapshot()
+    {
+        return new Dictionary<string, int>(items);
     }
 }
