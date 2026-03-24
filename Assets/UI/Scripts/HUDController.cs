@@ -3,6 +3,8 @@ using UnityEngine.UI;
 
 public class HUDController : MonoBehaviour
 {
+    public static HUDController Instance { get; private set; }
+
     [Header("Player References")]
     [SerializeField] private PlayerStats playerStats;
 
@@ -23,6 +25,11 @@ public class HUDController : MonoBehaviour
 
     private void OnEnable()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+
         if (playerStats == null)
         {
             playerStats = FindAnyObjectByType<PlayerStats>();
@@ -49,6 +56,11 @@ public class HUDController : MonoBehaviour
 
     private void OnDisable()
     {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
+
         if (playerStats != null)
         {
             playerStats.OnHealthChanged -= OnHealthChanged;
