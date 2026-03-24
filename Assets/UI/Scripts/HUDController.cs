@@ -1,68 +1,142 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class HUDController : MonoBehaviour
 {
-    [Header("Health")]
-    [SerializeField] private Slider healthSlider;
+    [Header("Player References")]
+    [SerializeField] private PlayerStats playerStats;
 
-    [Header("Inventory")]
-    [SerializeField] private Text inventoryText;
+    [Header("Suit UI")]
+    [SerializeField] private Slider suitIntegritySlider;
+    [SerializeField] private Slider oxygenSlider;
+    [SerializeField] private Text suitIntegrityLabel;
+    [SerializeField] private Text oxygenLabel;
+
+    [Header("Resource UI")]
+    [SerializeField] private Text resourcesText;
+    [SerializeField] private string[] trackedResourceIds = { "Iron", "Crystal", "FuelCell" };
+
+    [Header("Context UI")]
+    [SerializeField] private Text biomeLabel;
+    [SerializeField] private Text promptText;
+    [SerializeField] private GameObject pausePanel;
 
     private void OnEnable()
     {
-        if (InventorySystem.Instance != null)
+        if (playerStats == null)
         {
-            InventorySystem.Instance.OnInventoryChanged += RefreshInventory;
+            playerStats = FindAnyObjectByType<PlayerStats>();
         }
 
-        RefreshInventory();
+        if (playerStats != null)
+        {
+            playerStats.OnHealthChanged += OnHealthChanged;
+            playerStats.OnOxygenChanged += OnOxygenChanged;
+            OnHealthChanged(playerStats.CurrentHealth, playerStats.MaxHealth);
+            OnOxygenChanged(playerStats.CurrentOxygen, playerStats.MaxOxygen);
+        }
+
+        if (InventorySystem.Instance != null)
+        {
+            InventorySystem.Instance.OnInventoryChanged += RefreshResources;
+        }
+
+        RefreshResources();
+        ShowPrompt(string.Empty);
+        SetBiome("Unknown Sector");
+        SetPauseVisible(false);
     }
 
     private void OnDisable()
     {
+        if (playerStats != null)
+        {
+            playerStats.OnHealthChanged -= OnHealthChanged;
+            playerStats.OnOxygenChanged -= OnOxygenChanged;
+        }
+
         if (InventorySystem.Instance != null)
         {
-            InventorySystem.Instance.OnInventoryChanged -= RefreshInventory;
+            InventorySystem.Instance.OnInventoryChanged -= RefreshResources;
         }
     }
 
-    public void SetHealth(float current, float max)
+    public void SetBiome(string biomeName)
     {
-        if (healthSlider == null || max <= 0f)
+        if (biomeLabel == null)
         {
             return;
         }
 
-        healthSlider.value = Mathf.Clamp01(current / max);
+        biomeLabel.text = "Biome: " + biomeName;
     }
 
-    public void RefreshInventory()
+    public void ShowPrompt(string message)
     {
-        if (inventoryText == null)
+        if (promptText == null)
+        {
+            return;
+        }
+
+        promptText.text = message;
+        promptText.enabled = !string.IsNullOrWhiteSpace(message);
+    }
+
+    public void SetPauseVisible(bool isVisible)
+    {
+        if (pausePanel != null)
+        {
+            pausePanel.SetActive(isVisible);
+        }
+    }
+
+    public void RefreshResources()
+    {
+        if (resourcesText == null)
         {
             return;
         }
 
         if (InventorySystem.Instance == null)
         {
-            inventoryText.text = "Inventory: (none)";
+            resourcesText.text = "Resources: --";
             return;
         }
 
-        var items = InventorySystem.Instance.GetItems();
-        if (items.Count == 0)
+        string output = "Resources";
+        for (int i = 0; i < trackedResourceIds.Length; i++)
         {
-            inventoryText.text = "Inventory: (empty)";
-            return;
+            string id = trackedResourceIds[i];
+            int count = InventorySystem.Instance.GetCount(id);
+            output += "\n" + id + ": " + count;
         }
 
-        string output = "Inventory:";
-        foreach (var kvp in items)
+        resourcesText.text = output;
+    }
+
+    private void OnHealthChanged(float current, float max)
+    {
+        if (suitIntegritySlider != null && max > 0f)
         {
-            output += "\n- " + kvp.Key + " x" + kvp.Value;
+            suitIntegritySlider.value = Mathf.Clamp01(current / max);
         }
 
-        inventoryText.text = output;
+        if (suitIntegrityLabel != null)
+        {
+            suitIntegrityLabel.text = "Suit: " + Mathf.CeilToInt(current) + "/" + Mathf.CeilToInt(max);
+        }
+    }
+
+    private void OnOxygenChanged(float current, float max)
+    {
+        if (oxygenSlider != null && max > 0f)
+        {
+            oxygenSlider.value = Mathf.Clamp01(current / max);
+        }
+
+        if (oxygenLabel != null)
+        {
+            oxygenLabel.text = "O2: " + Mathf.CeilToInt(current) + "%";
+        }
     }
 }
