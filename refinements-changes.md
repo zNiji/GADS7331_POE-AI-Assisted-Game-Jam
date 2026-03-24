@@ -6,6 +6,10 @@ Tracks scope shifts, design decisions, and implementation changes over time.
 
 ## 2026-03-24
 
+### Pre-Development Brainstorm Baseline
+- The milestone roadmap and task checklist in `plan.md` are documented as the initial brainstorming baseline created before development started.
+- Future scope decisions should be compared against this baseline to track what changed during implementation.
+
 ### Initial Structure Decision
 - Established a modular Unity project layout under `Assets`:
   - `Player`, `Enemies`, `Resources`, `UI`, `Systems`
