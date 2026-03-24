@@ -59,12 +59,12 @@ public class PlayerMovement2D : MonoBehaviour
         float speedChangeRate = Mathf.Abs(targetSpeed) > 0.01f ? acceleration : deceleration;
 
         currentHorizontalSpeed = Mathf.MoveTowards(
-            rb.velocity.x,
+            rb.linearVelocity.x,
             targetSpeed,
             speedChangeRate * Time.fixedDeltaTime
         );
 
-        rb.velocity = new Vector2(currentHorizontalSpeed, rb.velocity.y);
+        rb.linearVelocity = new Vector2(currentHorizontalSpeed, rb.linearVelocity.y);
     }
 
     private void HandleJump()
@@ -74,7 +74,7 @@ public class PlayerMovement2D : MonoBehaviour
             return;
         }
 
-        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+        rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
     }
 
     private void HandleSpriteFlip()

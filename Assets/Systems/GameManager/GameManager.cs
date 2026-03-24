@@ -112,7 +112,7 @@ public class GameManager : MonoBehaviour
             Rigidbody2D playerRb = playerTransform.GetComponent<Rigidbody2D>();
             if (playerRb != null)
             {
-                playerRb.velocity = Vector2.zero;
+                playerRb.linearVelocity = Vector2.zero;
                 playerRb.angularVelocity = 0f;
             }
         }

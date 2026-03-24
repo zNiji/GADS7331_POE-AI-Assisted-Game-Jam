@@ -20,7 +20,7 @@ public class Bullet : MonoBehaviour
         owner = bulletOwner;
 
         Vector2 normalizedDirection = direction.normalized;
-        rb.velocity = normalizedDirection * speed;
+        rb.linearVelocity = normalizedDirection * speed;
 
         Destroy(gameObject, lifetime);
     }

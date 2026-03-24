@@ -120,7 +120,7 @@ public class EnemyAI2D : MonoBehaviour
     {
         if (patrolPointA == null || patrolPointB == null)
         {
-            rb.velocity = new Vector2(0f, rb.velocity.y);
+            rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
             return;
         }
 
@@ -143,7 +143,7 @@ public class EnemyAI2D : MonoBehaviour
             direction = 0f;
         }
 
-        rb.velocity = new Vector2(direction * speed, rb.velocity.y);
+        rb.linearVelocity = new Vector2(direction * speed, rb.linearVelocity.y);
         UpdateFacing(direction);
     }
 
