@@ -13,6 +13,7 @@ public class PlayerStats : MonoBehaviour
     private float currentHealth;
     private float currentOxygen;
     private bool isDead;
+    private float baseMaxHealth;
 
     public event Action<float, float> OnHealthChanged;
     public event Action<float, float> OnOxygenChanged;
@@ -25,6 +26,7 @@ public class PlayerStats : MonoBehaviour
 
     private void Awake()
     {
+        baseMaxHealth = maxHealth;
         currentHealth = maxHealth;
         currentOxygen = maxOxygen;
         isDead = false;
@@ -110,6 +112,22 @@ public class PlayerStats : MonoBehaviour
         maxHealth += amount;
         currentHealth = healByAmount ? currentHealth + amount : currentHealth;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    public void SetMaxHealthFromBonus(float bonusAmount, bool healToFull)
+    {
+        maxHealth = Mathf.Max(1f, baseMaxHealth + Mathf.Max(0f, bonusAmount));
+
+        if (healToFull)
+        {
+            currentHealth = maxHealth;
+        }
+        else
+        {
+            currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+        }
+
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 }

@@ -121,6 +121,11 @@ public class GameManager : MonoBehaviour
         {
             playerStats.ResetForNewRun();
         }
+
+        if (BaseUpgradeSystem.Instance != null)
+        {
+            BaseUpgradeSystem.Instance.ReapplyAllUpgradeEffects(true);
+        }
     }
 
     private void ResolveReferences()

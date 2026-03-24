@@ -27,4 +27,14 @@ public class PlayerUpgradeEffects : MonoBehaviour
 
         bonusMiningPower += amount;
     }
+
+    public void SetDamageBonus(int amount)
+    {
+        bonusDamage = Mathf.Max(0, amount);
+    }
+
+    public void SetMiningPowerBonus(int amount)
+    {
+        bonusMiningPower = Mathf.Max(0, amount);
+    }
 }

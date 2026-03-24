@@ -10,8 +10,6 @@ public class BaseUpgradeSystem : MonoBehaviour
     [SerializeField] private PlayerStats playerStats;
     [SerializeField] private PlayerUpgradeEffects playerUpgradeEffects;
 
-    private readonly Dictionary<string, int> currentLevels = new Dictionary<string, int>();
-
     public event Action OnUpgradesChanged;
 
     public IReadOnlyList<UpgradeDefinition> AvailableUpgrades => availableUpgrades;
@@ -27,16 +25,22 @@ public class BaseUpgradeSystem : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         ResolveReferences();
+        ReapplyAllUpgradeEffects(false);
+    }
+
+    private void Start()
+    {
+        ReapplyAllUpgradeEffects(false);
     }
 
     public int GetCurrentLevel(UpgradeDefinition definition)
     {
-        if (definition == null || string.IsNullOrWhiteSpace(definition.upgradeId))
+        if (definition == null || string.IsNullOrWhiteSpace(definition.upgradeId) || PermanentUpgradeSystem.Instance == null)
         {
             return 0;
         }
 
-        return currentLevels.TryGetValue(definition.upgradeId, out int level) ? level : 0;
+        return PermanentUpgradeSystem.Instance.GetUpgradeLevel(definition.upgradeId);
     }
 
     public bool IsMaxLevel(UpgradeDefinition definition)
@@ -70,7 +74,7 @@ public class BaseUpgradeSystem : MonoBehaviour
 
     public bool TryPurchaseUpgrade(UpgradeDefinition definition)
     {
-        if (definition == null || IsMaxLevel(definition) || !CanAfford(definition))
+        if (definition == null || IsMaxLevel(definition) || !CanAfford(definition) || PermanentUpgradeSystem.Instance == null)
         {
             return false;
         }
@@ -86,38 +90,54 @@ public class BaseUpgradeSystem : MonoBehaviour
             InventorySystem.Instance.SpendResource(cost.resourceId, cost.amount);
         }
 
-        int newLevel = GetCurrentLevel(definition) + 1;
-        currentLevels[definition.upgradeId] = newLevel;
-        ApplyEffect(definition);
+        PermanentUpgradeSystem.Instance.AddUpgradeLevel(definition.upgradeId, 1);
+        ReapplyAllUpgradeEffects(false);
         OnUpgradesChanged?.Invoke();
         return true;
     }
 
-    private void ApplyEffect(UpgradeDefinition definition)
+    public void ReapplyAllUpgradeEffects(bool healToFull)
     {
         ResolveReferences();
-        int amount = Mathf.Max(0, definition.effectAmountPerLevel);
 
-        switch (definition.effectType)
+        int totalHealthBonus = 0;
+        int totalMiningBonus = 0;
+        int totalDamageBonus = 0;
+
+        for (int i = 0; i < availableUpgrades.Count; i++)
         {
-            case UpgradeEffectType.IncreaseMaxHealth:
-                if (playerStats != null)
-                {
-                    playerStats.AddMaxHealth(amount, true);
-                }
-                break;
-            case UpgradeEffectType.IncreaseMiningSpeed:
-                if (playerUpgradeEffects != null)
-                {
-                    playerUpgradeEffects.AddMiningPowerBonus(amount);
-                }
-                break;
-            case UpgradeEffectType.IncreaseDamage:
-                if (playerUpgradeEffects != null)
-                {
-                    playerUpgradeEffects.AddDamageBonus(amount);
-                }
-                break;
+            UpgradeDefinition definition = availableUpgrades[i];
+            if (definition == null)
+            {
+                continue;
+            }
+
+            int level = GetCurrentLevel(definition);
+            int amount = Mathf.Max(0, definition.effectAmountPerLevel) * Mathf.Max(0, level);
+
+            switch (definition.effectType)
+            {
+                case UpgradeEffectType.IncreaseMaxHealth:
+                    totalHealthBonus += amount;
+                    break;
+                case UpgradeEffectType.IncreaseMiningSpeed:
+                    totalMiningBonus += amount;
+                    break;
+                case UpgradeEffectType.IncreaseDamage:
+                    totalDamageBonus += amount;
+                    break;
+            }
+        }
+
+        if (playerStats != null)
+        {
+            playerStats.SetMaxHealthFromBonus(totalHealthBonus, healToFull);
+        }
+
+        if (playerUpgradeEffects != null)
+        {
+            playerUpgradeEffects.SetMiningPowerBonus(totalMiningBonus);
+            playerUpgradeEffects.SetDamageBonus(totalDamageBonus);
         }
     }
 
