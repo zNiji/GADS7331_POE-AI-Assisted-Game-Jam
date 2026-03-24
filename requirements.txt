@@ -1,0 +1,5 @@
+Engine: Unity (2022 or later)
+Language: C#
+Tools:
+- Cursor AI Editor
+- ChatGPT (design + prompting)
