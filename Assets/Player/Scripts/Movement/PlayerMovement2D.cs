@@ -1,0 +1,118 @@
+using UnityEngine;
+
+[RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
+public class PlayerMovement2D : MonoBehaviour
+{
+    [Header("Movement")]
+    [SerializeField] private float moveSpeed = 7f;
+    [SerializeField] private float acceleration = 12f;
+    [SerializeField] private float deceleration = 16f;
+    [SerializeField] private float jumpForce = 14f;
+    [SerializeField] private SpriteRenderer spriteRenderer;
+
+    [Header("Ground Check")]
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private float groundCheckRadius = 0.15f;
+    [SerializeField] private LayerMask groundLayer;
+
+    private Rigidbody2D rb;
+    private float moveInputRaw;
+    private bool jumpPressed;
+    private bool isGrounded;
+    private float currentHorizontalSpeed;
+
+    public float HorizontalInput => moveInputRaw;
+    public bool IsGrounded => isGrounded;
+
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody2D>();
+        if (spriteRenderer == null)
+        {
+            spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        }
+    }
+
+    private void Update()
+    {
+        moveInputRaw = Input.GetAxisRaw("Horizontal");
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            jumpPressed = true;
+        }
+
+        HandleSpriteFlip();
+    }
+
+    private void FixedUpdate()
+    {
+        CheckGrounded();
+        HandleHorizontalMovement();
+        HandleJump();
+        jumpPressed = false;
+    }
+
+    private void HandleHorizontalMovement()
+    {
+        float targetSpeed = moveInputRaw * moveSpeed;
+        float speedChangeRate = Mathf.Abs(targetSpeed) > 0.01f ? acceleration : deceleration;
+
+        currentHorizontalSpeed = Mathf.MoveTowards(
+            rb.velocity.x,
+            targetSpeed,
+            speedChangeRate * Time.fixedDeltaTime
+        );
+
+        rb.velocity = new Vector2(currentHorizontalSpeed, rb.velocity.y);
+    }
+
+    private void HandleJump()
+    {
+        if (!jumpPressed || !isGrounded)
+        {
+            return;
+        }
+
+        rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+    }
+
+    private void HandleSpriteFlip()
+    {
+        if (spriteRenderer == null)
+        {
+            return;
+        }
+
+        if (moveInputRaw > 0.01f)
+        {
+            spriteRenderer.flipX = false;
+        }
+        else if (moveInputRaw < -0.01f)
+        {
+            spriteRenderer.flipX = true;
+        }
+    }
+
+    private void CheckGrounded()
+    {
+        if (groundCheck == null)
+        {
+            isGrounded = false;
+            return;
+        }
+
+        isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundLayer);
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (groundCheck == null)
+        {
+            return;
+        }
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
+    }
+}
