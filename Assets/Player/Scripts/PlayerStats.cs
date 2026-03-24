@@ -9,6 +9,8 @@ public class PlayerStats : MonoBehaviour
     [Header("Oxygen")]
     [SerializeField] private float maxOxygen = 100f;
     [SerializeField] private float oxygenDrainPerSecond = 1f;
+    [SerializeField] private float damageShakeDuration = 0.12f;
+    [SerializeField] private float damageShakeMagnitude = 0.12f;
 
     private float currentHealth;
     private float currentOxygen;
@@ -52,6 +54,11 @@ public class PlayerStats : MonoBehaviour
 
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+        if (CameraShake2D.Instance != null)
+        {
+            CameraShake2D.Instance.Shake(damageShakeDuration, damageShakeMagnitude);
+        }
 
         if (currentHealth <= 0f)
         {

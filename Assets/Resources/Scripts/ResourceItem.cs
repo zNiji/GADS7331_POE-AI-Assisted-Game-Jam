@@ -7,6 +7,8 @@ public class ResourceItem : MonoBehaviour
     [SerializeField] private string resourceId = "Iron";
     [SerializeField] private int amount = 1;
     [SerializeField] private bool requirePlayerTag = true;
+    [SerializeField] private AudioClip pickupSfx;
+    [SerializeField] private float pickupSfxVolume = 0.75f;
 
     public void Initialize(string id, int count)
     {
@@ -28,6 +30,11 @@ public class ResourceItem : MonoBehaviour
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.AddItem(resourceId, amount);
+        }
+
+        if (pickupSfx != null)
+        {
+            AudioSource.PlayClipAtPoint(pickupSfx, transform.position, pickupSfxVolume);
         }
 
         Destroy(gameObject);

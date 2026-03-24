@@ -13,6 +13,9 @@ public class ResourceNode : MonoBehaviour, IRunResettable
     [SerializeField] private KeyCode mineKey = KeyCode.E;
     [SerializeField] private bool requirePlayerTag = true;
     [SerializeField] private string promptMessage = "Press E to mine";
+    [SerializeField] private ParticleSystem mineHitParticles;
+    [SerializeField] private AudioClip mineSfx;
+    [SerializeField] private float mineSfxVolume = 0.7f;
 
     private int currentHealth;
     private bool playerInRange;
@@ -49,6 +52,13 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
 
         currentHealth -= damage;
+        SpawnMineParticles();
+
+        if (mineSfx != null)
+        {
+            AudioSource.PlayClipAtPoint(mineSfx, transform.position, mineSfxVolume);
+        }
+
         if (currentHealth <= 0)
         {
             DropResource();
@@ -126,5 +136,16 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
 
         return other.GetComponent<PlayerMovement2D>() != null || other.GetComponentInParent<PlayerMovement2D>() != null;
+    }
+
+    private void SpawnMineParticles()
+    {
+        if (mineHitParticles == null)
+        {
+            return;
+        }
+
+        ParticleSystem spawned = Instantiate(mineHitParticles, transform.position, Quaternion.identity);
+        Destroy(spawned.gameObject, 2f);
     }
 }

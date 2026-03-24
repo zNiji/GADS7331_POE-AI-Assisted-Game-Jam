@@ -11,6 +11,10 @@ public class PlayerShooting : MonoBehaviour
     [SerializeField] private float fireRate = 5f;
     [SerializeField] private float bulletSpeed = 14f;
     [SerializeField] private int bulletDamage = 1;
+    [SerializeField] private AudioClip shootSfx;
+    [SerializeField] private float shootVolume = 0.8f;
+    [SerializeField] private float shootShakeDuration = 0.06f;
+    [SerializeField] private float shootShakeMagnitude = 0.06f;
 
     private float nextShotTime;
     private PlayerUpgradeEffects upgradeEffects;
@@ -53,6 +57,16 @@ public class PlayerShooting : MonoBehaviour
 
         Bullet spawnedBullet = Instantiate(bulletPrefab, firePoint.position, Quaternion.identity);
         spawnedBullet.Initialize(shootDirection, bulletSpeed, finalDamage, gameObject);
+
+        if (shootSfx != null)
+        {
+            AudioSource.PlayClipAtPoint(shootSfx, firePoint.position, shootVolume);
+        }
+
+        if (CameraShake2D.Instance != null)
+        {
+            CameraShake2D.Instance.Shake(shootShakeDuration, shootShakeMagnitude);
+        }
     }
 
     private float GetFacingDirectionSign()
