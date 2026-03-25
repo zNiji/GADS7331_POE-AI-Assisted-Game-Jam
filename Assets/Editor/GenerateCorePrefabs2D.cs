@@ -28,18 +28,40 @@ public static class GenerateCorePrefabs2D
         Sprite enemySprite = CreatePixelSprite("spr_enemy", new Color(0.8f, 0.25f, 0.25f), new Color(0.35f, 0.08f, 0.08f));
         Sprite nodeSprite = CreatePixelSprite("spr_resource_node", new Color(0.35f, 0.75f, 0.85f), new Color(0.15f, 0.35f, 0.45f));
         Sprite itemSprite = CreatePixelSprite("spr_resource_item", new Color(0.6f, 1f, 0.75f), new Color(0.2f, 0.45f, 0.25f));
+        Sprite healthPickupSprite = CreatePixelSprite("spr_health_pickup", new Color(0.35f, 1f, 0.55f), new Color(0.12f, 0.35f, 0.22f));
 
         GameObject resourceItemPrefab = CreateResourceItemPrefab(itemSprite);
         GameObject bulletPrefab = CreateBulletPrefab(bulletSprite);
         GameObject enemyPrefab = CreateEnemyPrefab(enemySprite);
         GameObject resourceNodePrefab = CreateResourceNodePrefab(nodeSprite, resourceItemPrefab);
+        GameObject healthPickupPrefab = CreateHealthPickupPrefab(healthPickupSprite);
         GameObject rowPrefab = CreateUpgradeRowPrefab();
         GameObject playerPrefab = CreatePlayerPrefab(CreatePixelSprite("spr_player", new Color(0.4f, 0.8f, 1f), new Color(0.12f, 0.22f, 0.35f)), bulletPrefab);
         GameObject hudPrefab = CreateHudCanvasPrefab(rowPrefab);
-        GameObject gameSystemsPrefab = CreateGameSystemsPrefab(enemyPrefab, resourceNodePrefab);
+        GameObject gameSystemsPrefab = CreateGameSystemsPrefab(enemyPrefab, resourceNodePrefab, bulletPrefab);
 
         Selection.activeObject = gameSystemsPrefab != null ? gameSystemsPrefab : rowPrefab;
-        Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
+        Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, HealthPickup, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
+    }
+
+    private static GameObject CreateHealthPickupPrefab(Sprite healthSprite)
+    {
+        GameObject root = new GameObject("HealthPickup");
+        SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+        renderer.sprite = healthSprite;
+        renderer.sortingOrder = 1;
+
+        CircleCollider2D col = root.AddComponent<CircleCollider2D>();
+        col.isTrigger = true;
+        col.radius = 0.5f;
+
+        // Attach behavior
+        root.AddComponent<HealthPickup>();
+
+        string path = PrefabDir + "/HealthPickup.prefab";
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+        Object.DestroyImmediate(root);
+        return prefab;
     }
 
     [MenuItem("Tools/Frontier Extraction/Bootstrap Open Scene From Generated Prefabs")]
@@ -204,6 +226,7 @@ public static class GenerateCorePrefabs2D
         BuildPlatformsIfMissing(geometryRoot, groundSprite);
         BuildSpawnPointsIfMissing(spawnPointsRoot);
         SnapSpawnPointsToGround(spawnPointsRoot);
+        SpawnHealthPickups(levelRoot.transform, spawnPointsRoot);
         PositionPlayerAtSpawn();
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -236,8 +259,10 @@ public static class GenerateCorePrefabs2D
             }
 
             Vector3 pos = sp.transform.position;
-            Vector2 origin = new Vector2(pos.x, pos.y + 10f);
-            RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 25f, mask);
+            // Important: only raycast from just above the intended spawn height.
+            // Otherwise we can "snap" everything to the top-most platform collider in the same X column.
+            Vector2 origin = new Vector2(pos.x, pos.y + 0.2f);
+            RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 20f, mask);
             if (!hit.collider)
             {
                 continue;
@@ -247,6 +272,97 @@ public static class GenerateCorePrefabs2D
             float yOffset = sp.Type == SpawnPoint2D.SpawnType.Resource ? 0.5f : 0.6f;
 
             sp.transform.position = new Vector3(pos.x, surfaceY + yOffset, pos.z);
+        }
+    }
+
+    private static void SpawnHealthPickups(Transform levelRootTransform, Transform spawnPointsRoot)
+    {
+        if (levelRootTransform == null) return;
+
+        GameObject healthPickupPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/HealthPickup.prefab");
+        if (healthPickupPrefab == null) return;
+
+        Transform healthRoot = EnsureChild(levelRootTransform, "HealthPickups");
+        ClearChildren(healthRoot);
+
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        if (groundLayer < 0) return;
+        LayerMask mask = 1 << groundLayer;
+
+        // Avoid placing pickups on top of ore/resource spawn locations.
+        float avoidResourceRadius = 2.5f;
+        Vector3[] resourceSpawnPositions = new Vector3[0];
+        if (spawnPointsRoot != null)
+        {
+            SpawnPoint2D[] all = spawnPointsRoot.GetComponentsInChildren<SpawnPoint2D>(true);
+            System.Collections.Generic.List<Vector3> list = new System.Collections.Generic.List<Vector3>();
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] != null && all[i].Type == SpawnPoint2D.SpawnType.Resource)
+                {
+                    list.Add(all[i].transform.position);
+                }
+            }
+            resourceSpawnPositions = list.ToArray();
+        }
+
+        // Match the tier spacing used by BuildPlatformsIfMissing().
+        float tier1Y = 0f;
+        float tier2Y = 3f;
+        float tier3Y = 6f;
+        float tier4Y = 9f;
+
+        // Less common: aim for only a couple of placements, but keep extra candidates
+        // in case one happens to overlap an ore.
+        int maxPickups = 2;
+        int spawnedCount = 0;
+        Vector3[] pickupSpawnPositions =
+        {
+            new Vector3(-45f, tier1Y + 2.2f, 0f),
+            new Vector3(-40f, tier2Y + 2.2f, 0f),
+            new Vector3(20f, tier3Y + 2.2f, 0f),
+            new Vector3(30f, tier4Y + 2.2f, 0f),
+        };
+
+        for (int i = 0; i < pickupSpawnPositions.Length; i++)
+        {
+            if (spawnedCount >= maxPickups)
+            {
+                break;
+            }
+
+            Vector3 guess = pickupSpawnPositions[i];
+
+            // Skip if too close to an ore spawn point.
+            bool overlapsOre = false;
+            for (int j = 0; j < resourceSpawnPositions.Length; j++)
+            {
+                if (Vector3.Distance(new Vector3(guess.x, guess.y, guess.z), resourceSpawnPositions[j]) <= avoidResourceRadius)
+                {
+                    overlapsOre = true;
+                    break;
+                }
+            }
+            if (overlapsOre)
+            {
+                continue;
+            }
+
+            Vector2 origin = new Vector2(guess.x, guess.y + 10f);
+            RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 25f, mask);
+            if (!hit.collider) continue;
+
+            float surfaceY = hit.point.y;
+            float yOffset = 0.7f; // slightly above the platform surface
+            Vector3 finalPos = new Vector3(guess.x, surfaceY + yOffset, guess.z);
+
+            GameObject instance = PrefabUtility.InstantiatePrefab(healthPickupPrefab) as GameObject;
+            if (instance == null) continue;
+
+            instance.transform.SetPositionAndRotation(finalPos, Quaternion.identity);
+            instance.transform.SetParent(healthRoot, true);
+            Undo.RegisterCreatedObjectUndo(instance, "Spawn HealthPickup");
+            spawnedCount++;
         }
     }
 
@@ -749,7 +865,7 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateGameSystemsPrefab(GameObject enemyPrefab, GameObject resourceNodePrefab)
+    private static GameObject CreateGameSystemsPrefab(GameObject enemyPrefab, GameObject resourceNodePrefab, GameObject bulletPrefab)
     {
         GameObject root = new GameObject("GameSystems");
         GameManager gameManager = root.AddComponent<GameManager>();
@@ -774,6 +890,7 @@ public static class GenerateCorePrefabs2D
         SerializedObject spawnerSO = new SerializedObject(spawner);
         spawnerSO.FindProperty("enemyPrefab").objectReferenceValue = enemyPrefab;
         spawnerSO.FindProperty("resourceNodePrefab").objectReferenceValue = resourceNodePrefab;
+        spawnerSO.FindProperty("bulletPrefab").objectReferenceValue = bulletPrefab;
         spawnerSO.FindProperty("spawnedEnemiesRoot").objectReferenceValue = enemiesRoot;
         spawnerSO.FindProperty("spawnedResourcesRoot").objectReferenceValue = resourcesRoot;
         spawnerSO.ApplyModifiedPropertiesWithoutUndo();
@@ -1155,7 +1272,8 @@ public static class GenerateCorePrefabs2D
         root.transform.SetParent(geometryRoot);
         root.transform.localPosition = Vector3.zero;
 
-        for (int x = -60; x <= 60; x++)
+        // Wider map for exploration (player starts near x = 0).
+        for (int x = -140; x <= 140; x++)
         {
             CreateBlock(root.transform, groundSprite, new Vector3(x, -3f, 0f), true);
             CreateBlock(root.transform, groundSprite, new Vector3(x, -4f, 0f), true);
@@ -1181,26 +1299,33 @@ public static class GenerateCorePrefabs2D
         float tier3Y = 6f;
         float tier4Y = 9f;
 
-        // Tier 1 (-1)
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-55f, tier1Y, 0f), 30);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-5f, tier1Y, 0f), 20);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(25f, tier1Y, 0f), 20);
+        // Tier 1 (0)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-95f, tier1Y, 0f), 45);   // -95..-51
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-45f, tier1Y, 0f), 40);  // -45..-6
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-5f, tier1Y, 0f), 35);   // -5..29
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(35f, tier1Y, 0f), 35);   // 35..69
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(75f, tier1Y, 0f), 25);   // 75..99
 
-        // Tier 2 (2)
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-45f, tier2Y, 0f), 22);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-10f, tier2Y, 0f), 22);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(18f, tier2Y, 0f), 18);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(42f, tier2Y, 0f), 12);
+        // Tier 2 (3)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-110f, tier2Y, 0f), 35);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-60f, tier2Y, 0f), 35);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-10f, tier2Y, 0f), 30);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(35f, tier2Y, 0f), 25);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(70f, tier2Y, 0f), 40);
 
-        // Tier 3 (5)
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-28f, tier3Y, 0f), 26);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-2f, tier3Y, 0f), 26);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(20f, tier3Y, 0f), 16);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(38f, tier3Y, 0f), 10);
+        // Tier 3 (6)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-120f, tier3Y, 0f), 40);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-65f, tier3Y, 0f), 35);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-20f, tier3Y, 0f), 30);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(25f, tier3Y, 0f), 30);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(70f, tier3Y, 0f), 35);
 
-        // Tier 4 (8)
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-12f, tier4Y, 0f), 30);
-        CreatePlatformStrip(root.transform, groundSprite, new Vector3(22f, tier4Y, 0f), 14);
+        // Tier 4 (9)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-105f, tier4Y, 0f), 45);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-50f, tier4Y, 0f), 35);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(0f, tier4Y, 0f), 35);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(45f, tier4Y, 0f), 25);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(80f, tier4Y, 0f), 25);
     }
 
     private static void CreatePlatformStrip(Transform root, Sprite sprite, Vector3 start, int length)
@@ -1227,32 +1352,64 @@ public static class GenerateCorePrefabs2D
         float enemySpawnYOffset = 1.1f;
         float resourceSpawnYOffset = 1.0f;
 
-        // Enemies across tiers
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_A", new Vector3(-40f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_B", new Vector3(-15f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_C", new Vector3(10f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_D", new Vector3(35f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_E", new Vector3(-28f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_F", new Vector3(-2f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_G", new Vector3(25f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_H", new Vector3(33f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_I", new Vector3(-18f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        // Platforms are made of "strips". To ensure it never feels sparse, we spawn at least:
+        // - 1 enemy per platform strip
+        // - 1 resource node per platform strip (Iron everywhere, with deterministic Crystal rarity on some strips)
 
-        // Resources: Iron + Crystal (parsed from SpawnPoint2D.spawnId)
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_A", new Vector3(-45f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_B", new Vector3(-15f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_C", new Vector3(28f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        // Tier 1 strip centers (y = 0): [-95..-51], [-45..-6], [-5..29], [35..69], [75..99]
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_1", new Vector3(-73f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_2", new Vector3(-26f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_3", new Vector3(12f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_4", new Vector3(52f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_5", new Vector3(87f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
 
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_A", new Vector3(-35f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_B", new Vector3(-5f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_D", new Vector3(12f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_1", new Vector3(-73f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_2", new Vector3(-26f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_3", new Vector3(12f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_4", new Vector3(52f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_5", new Vector3(87f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
 
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_C", new Vector3(25f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_E", new Vector3(0f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_D", new Vector3(-20f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        // Tier 2 strip centers (y = 3): [-110..-76], [-60..-26], [-10..19], [35..59], [70..109]
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_1", new Vector3(-93f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_2", new Vector3(-43f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_3", new Vector3(5f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_4", new Vector3(47f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_5", new Vector3(90f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
 
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_E", new Vector3(-8f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_F", new Vector3(18f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        // Crystal rarity: tier2 strips 2 and 4 are Crystal, others Iron.
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T2_1", new Vector3(-93f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T2_2", new Vector3(-43f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T2_3", new Vector3(5f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T2_4", new Vector3(47f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T2_5", new Vector3(90f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+
+        // Tier 3 strip centers (y = 6): [-120..-81], [-65..-31], [-20..9], [25..54], [70..104]
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_1", new Vector3(-101f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_2", new Vector3(-48f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_3", new Vector3(-5f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_4", new Vector3(40f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_5", new Vector3(87f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+
+        // Crystal rarity: tier3 strips 2 and 5 are Crystal, others Iron.
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T3_1", new Vector3(-101f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T3_2", new Vector3(-48f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T3_3", new Vector3(-5f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T3_4", new Vector3(40f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T3_5", new Vector3(87f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+
+        // Tier 4 strip centers (y = 9): [-105..-61], [-50..-16], [0..34], [45..69], [80..104]
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_1", new Vector3(-83f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_2", new Vector3(-33f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_3", new Vector3(17f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_4", new Vector3(57f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_5", new Vector3(92f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+
+        // Crystal rarity: tier4 strips 1 and 3 are Crystal, others Iron.
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T4_1", new Vector3(-83f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T4_2", new Vector3(-33f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T4_3", new Vector3(17f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T4_4", new Vector3(57f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T4_5", new Vector3(92f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
     }
 
     private static void PositionPlayerAtSpawn()

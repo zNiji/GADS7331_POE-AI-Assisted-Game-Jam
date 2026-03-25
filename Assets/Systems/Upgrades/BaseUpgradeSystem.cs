@@ -25,12 +25,12 @@ public class BaseUpgradeSystem : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
         ResolveReferences();
-        ReapplyAllUpgradeEffects(false);
     }
 
     private void Start()
     {
-        ReapplyAllUpgradeEffects(false);
+        // On initial scene load we want current health to match the (possibly upgraded) max health.
+        ReapplyAllUpgradeEffects(true);
     }
 
     public int GetCurrentLevel(UpgradeDefinition definition)

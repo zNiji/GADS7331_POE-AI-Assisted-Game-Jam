@@ -203,5 +203,29 @@ MonoBehaviour:
   crystalResourceId: Crystal
   spawnOnStart: 1
   clearSpawnedOnRespawn: 1
+  minDifficultyDistance: 0
+  maxDifficultyDistance: 90
+  minEnemyHealthMultiplier: 1
+  maxEnemyHealthMultiplier: 2.6
+  minEnemySpeedMultiplier: 1
+  maxEnemySpeedMultiplier: 1.6
+  minEnemyDamageMultiplier: 1
+  maxEnemyDamageMultiplier: 2
+  minShooterChance: 0.05
+  maxShooterChance: 0.35
+  minIronHealthMultiplier: 1
+  maxIronHealthMultiplier: 1.35
+  minIronDropMultiplier: 1
+  maxIronDropMultiplier: 1.8
+  minCrystalHealthMultiplier: 1.2
+  maxCrystalHealthMultiplier: 2.6
+  minCrystalDropMultiplier: 1.2
+  maxCrystalDropMultiplier: 2.8
+  healthPickupDifficultyMultiplier: 1
+  bulletPrefab: {fileID: 5895486365926902176, guid: 534d57b249bce7f4b8d8637a094983c3, type: 3}
+  shooterRange: 10
+  shooterCooldown: 1.2
+  shooterBulletSpeed: 12
+  shooterBulletDamage: 1
   spawnedEnemiesRoot: {fileID: 5175996841251594034}
   spawnedResourcesRoot: {fileID: 5731133463108740233}

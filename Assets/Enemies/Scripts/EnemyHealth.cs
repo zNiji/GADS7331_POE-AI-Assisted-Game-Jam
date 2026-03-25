@@ -45,4 +45,22 @@ public class EnemyHealth : MonoBehaviour, IDamageable, IRunResettable
             cachedCollider.enabled = true;
         }
     }
+
+    // Called by the level spawner to scale enemy difficulty.
+    public void ApplyDifficulty(float healthMultiplier)
+    {
+        if (healthMultiplier <= 0f)
+        {
+            return;
+        }
+
+        maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * healthMultiplier));
+        currentHealth = maxHealth;
+        gameObject.SetActive(true);
+
+        if (cachedCollider != null)
+        {
+            cachedCollider.enabled = true;
+        }
+    }
 }

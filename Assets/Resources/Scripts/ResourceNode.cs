@@ -139,6 +139,28 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
     }
 
+    // Called by the level spawner to scale mining difficulty and loot for rarer materials.
+    public void ApplyDifficulty(float maxHealthMultiplier, float dropMultiplier)
+    {
+        if (maxHealthMultiplier <= 0f || dropMultiplier <= 0f)
+        {
+            return;
+        }
+
+        maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * maxHealthMultiplier));
+        dropAmount = Mathf.Max(1, Mathf.RoundToInt(dropAmount * dropMultiplier));
+
+        currentHealth = maxHealth;
+        playerInRange = false;
+
+        if (triggerCollider != null)
+        {
+            triggerCollider.enabled = true;
+        }
+
+        gameObject.SetActive(true);
+    }
+
     private bool IsValidPlayerCollider(Collider2D other)
     {
         if (requirePlayerTag)

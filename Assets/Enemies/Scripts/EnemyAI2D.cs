@@ -36,6 +36,17 @@ public class EnemyAI2D : MonoBehaviour
     private EnemyState state;
     private float nextDamageTime;
 
+    // Called by the level spawner to scale enemy difficulty based on distance.
+    public void ApplyDifficulty(float speedMultiplier, float damageMultiplier)
+    {
+        speedMultiplier = Mathf.Max(0.01f, speedMultiplier);
+        damageMultiplier = Mathf.Max(0.01f, damageMultiplier);
+
+        patrolSpeed *= speedMultiplier;
+        chaseSpeed *= speedMultiplier;
+        contactDamage *= damageMultiplier;
+    }
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
