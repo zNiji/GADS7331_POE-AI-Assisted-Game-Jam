@@ -32,12 +32,23 @@ public class Bullet : MonoBehaviour
             return;
         }
 
-        IDamageable damageable = other.GetComponentInParent<IDamageable>();
-        if (damageable != null)
+        // Ore/resources should not stop bullets.
+        // Resource nodes use trigger colliders and do not implement IDamageable.
+        ResourceNode resourceNode = other.GetComponentInParent<ResourceNode>();
+        if (resourceNode != null)
         {
-            damageable.TakeDamage(damage);
+            return;
         }
 
+        IDamageable damageable = other.GetComponentInParent<IDamageable>();
+        if (damageable == null)
+        {
+            // Hit the environment (e.g. ground/platform). Destroy the bullet.
+            Destroy(gameObject);
+            return;
+        }
+
+        damageable.TakeDamage(damage);
         Destroy(gameObject);
     }
 }

@@ -919,12 +919,12 @@ public static class GenerateCorePrefabs2D
 
         Slider suitSlider = CreateSlider("SuitIntegritySlider", canvasGO.transform, new Vector2(190f, -40f));
         Slider oxygenSlider = CreateSlider("OxygenSlider", canvasGO.transform, new Vector2(190f, -78f));
-        Text suitText = CreateText("SuitLabel", canvasGO.transform, new Vector2(20f, -32f), 16, TextAnchor.MiddleLeft);
-        Text oxygenText = CreateText("OxygenLabel", canvasGO.transform, new Vector2(20f, -70f), 16, TextAnchor.MiddleLeft);
-        Text resourcesText = CreateText("ResourcesText", canvasGO.transform, new Vector2(20f, -120f), 16, TextAnchor.UpperLeft);
-        Text biomeText = CreateText("BiomeLabel", canvasGO.transform, new Vector2(20f, -250f), 16, TextAnchor.MiddleLeft);
-        Text promptText = CreateCenteredText("PromptText", canvasGO.transform, new Vector2(0f, 120f), 20);
-        Text extractionText = CreateCenteredText("ExtractionStatusText", canvasGO.transform, new Vector2(0f, 80f), 18);
+        Text suitText = CreateText("SuitLabel", canvasGO.transform, new Vector2(20f, -32f), 18, TextAnchor.MiddleLeft);
+        Text oxygenText = CreateText("OxygenLabel", canvasGO.transform, new Vector2(20f, -70f), 18, TextAnchor.MiddleLeft);
+        Text resourcesText = CreateText("ResourcesText", canvasGO.transform, new Vector2(20f, -120f), 18, TextAnchor.UpperLeft);
+        Text biomeText = CreateText("BiomeLabel", canvasGO.transform, new Vector2(20f, -250f), 18, TextAnchor.MiddleLeft);
+        Text promptText = CreateCenteredText("PromptText", canvasGO.transform, new Vector2(0f, 120f), 22);
+        Text extractionText = CreateCenteredText("ExtractionStatusText", canvasGO.transform, new Vector2(0f, 80f), 20);
 
         // Extract button so players can bank materials at any time.
         GameObject extractButtonGO = new GameObject("ExtractButton",
@@ -955,7 +955,8 @@ public static class GenerateCorePrefabs2D
         ebRt.sizeDelta = new Vector2(320f, 50f);
         extractBtnText.text = "Extract (X)";
 
-        Text debugText = CreateText("InventoryDebugText", canvasGO.transform, new Vector2(-320f, -120f), 14, TextAnchor.UpperLeft, new Vector2(350f, 300f), true);
+        // Debug inventory: move under Resources on the left and make it larger/readable.
+        Text debugText = CreateText("InventoryDebugText", canvasGO.transform, new Vector2(20f, -155f), 18, TextAnchor.UpperLeft, new Vector2(420f, 240f), false);
 
         // Bigger pause panel = more space for inventory texts and fewer overlap/clipping issues.
         GameObject pausePanel = CreatePanel("PausePanel", canvasGO.transform, new Vector2(0f, 0f), new Vector2(720f, 420f), new Color(0f, 0f, 0f, 0.7f));

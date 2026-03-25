@@ -75,30 +75,30 @@ public class InventoryPauseMenuUI : MonoBehaviour
         {
             runInventoryText = FindOrCreateText(
                 "RunInventoryText",
-                new Vector2(0f, 70f),
+                new Vector2(0f, 25f),
                 26,
-                TextAnchor.MiddleCenter,
-                new Vector2(520f, 150f)
+                TextAnchor.UpperCenter,
+                new Vector2(520f, 120f)
             );
         }
         else
         {
-            ApplyTextLayout(runInventoryText, "RunInventoryText", new Vector2(0f, 70f), 26, TextAnchor.MiddleCenter, new Vector2(520f, 150f));
+            ApplyTextLayout(runInventoryText, "RunInventoryText", new Vector2(0f, 25f), 26, TextAnchor.UpperCenter, new Vector2(520f, 120f));
         }
 
         if (bankedInventoryText == null)
         {
             bankedInventoryText = FindOrCreateText(
                 "BankedInventoryText",
-                new Vector2(0f, -25f),
+                new Vector2(0f, -85f),
                 22,
-                TextAnchor.MiddleCenter,
-                new Vector2(520f, 170f)
+                TextAnchor.UpperCenter,
+                new Vector2(520f, 90f)
             );
         }
         else
         {
-            ApplyTextLayout(bankedInventoryText, "BankedInventoryText", new Vector2(0f, -25f), 22, TextAnchor.MiddleCenter, new Vector2(520f, 170f));
+            ApplyTextLayout(bankedInventoryText, "BankedInventoryText", new Vector2(0f, -85f), 22, TextAnchor.UpperCenter, new Vector2(520f, 90f));
         }
     }
 
@@ -133,7 +133,8 @@ public class InventoryPauseMenuUI : MonoBehaviour
         text.resizeTextForBestFit = false; // prevent best-fit scaling from causing line overlap
         text.lineSpacing = 1.15f;
         text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
+        // Truncate instead of overflowing vertically so long inventories never cover buttons.
+        text.verticalOverflow = VerticalWrapMode.Truncate;
     }
 
     private Text FindOrCreateText(string name, Vector2 localAnchoredPos, int fontSize,
@@ -176,7 +177,8 @@ public class InventoryPauseMenuUI : MonoBehaviour
         text.alignment = anchor;
         text.color = Color.white;
         text.horizontalOverflow = HorizontalWrapMode.Overflow;
-        text.verticalOverflow = VerticalWrapMode.Overflow;
+        // Truncate instead of overflowing vertically so long inventories never cover buttons.
+        text.verticalOverflow = VerticalWrapMode.Truncate;
         text.text = string.Empty;
         return text;
     }
