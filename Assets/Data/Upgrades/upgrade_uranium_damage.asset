@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7754b4ac7a88a5438b3aad42f6adef6, type: 3}
+  m_Name: upgrade_uranium_damage
+  m_EditorClassIdentifier: 
+  upgradeId: upgrade.uranium_damage
+  displayName: Omega Weaponry
+  description: High-tier damage upgrades using ultra-rare ore.
+  effectType: 2
+  effectAmountPerLevel: 4
+  maxLevel: 3
+  resourceCosts:
+  - resourceId: Iron
+    amount: 8
+  - resourceId: Crystal
+    amount: 2
+  - resourceId: Uranium
+    amount: 1

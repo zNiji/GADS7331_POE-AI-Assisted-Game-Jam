@@ -199,8 +199,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyPrefab: {fileID: 4269937590747123079, guid: 150ca472dfeb54943ab5fc40d3284411, type: 3}
   resourceNodePrefab: {fileID: 8342079702291058534, guid: 7227ff2677deb9f47b7ae35ed3f070e1, type: 3}
+  oxygenPickupPrefab: {fileID: 6121133854273256998, guid: 8eb94b86481bc9641a4a23ae5629cc36, type: 3}
+  spawnOxygenPickupsIfNone: 1
   defaultResourceId: Iron
   crystalResourceId: Crystal
+  uraniumResourceId: Uranium
   spawnOnStart: 1
   clearSpawnedOnRespawn: 1
   minDifficultyDistance: 0
@@ -221,10 +224,22 @@ MonoBehaviour:
   maxCrystalHealthMultiplier: 2.6
   minCrystalDropMultiplier: 1.2
   maxCrystalDropMultiplier: 2.8
+  minUraniumHealthMultiplier: 2
+  maxUraniumHealthMultiplier: 5
+  minUraniumDropMultiplier: 1.5
+  maxUraniumDropMultiplier: 4
   bulletPrefab: {fileID: 5895486365926902176, guid: 534d57b249bce7f4b8d8637a094983c3, type: 3}
   shooterRange: 10
   shooterCooldown: 1.2
   shooterBulletSpeed: 12
   shooterBulletDamage: 10
+  maxOxygenPickups: 2
+  oxygenAvoidResourceRadius: 2
+  oxygenAvoidExistingPickupRadius: 0.6
+  oxygenAvoidHealthPickupRadius: 1.2
+  oxygenRaycastHeightAbove: 10
+  oxygenRaycastDistance: 25
+  oxygenSurfaceYOffset: 0.7
+  oxygenSpawnAttempts: 80
   spawnedEnemiesRoot: {fileID: 5175996841251594034}
   spawnedResourcesRoot: {fileID: 5731133463108740233}

@@ -49,6 +49,9 @@ public class HUDController : MonoBehaviour
             InventorySystem.Instance.OnInventoryChanged += RefreshResources;
         }
 
+        // Keep HUD resource list aligned with actual mineable resources.
+        trackedResourceIds = new[] { "Iron", "Crystal", "Uranium" };
+
         RefreshResources();
         ShowPrompt(string.Empty);
         SetExtractionStatus(string.Empty);

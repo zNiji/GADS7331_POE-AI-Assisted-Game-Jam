@@ -29,19 +29,22 @@ public static class GenerateCorePrefabs2D
         Sprite nodeSprite = CreatePixelSprite("spr_resource_node", new Color(0.35f, 0.75f, 0.85f), new Color(0.15f, 0.35f, 0.45f));
         Sprite itemSprite = CreatePixelSprite("spr_resource_item", new Color(0.6f, 1f, 0.75f), new Color(0.2f, 0.45f, 0.25f));
         Sprite healthPickupSprite = CreatePixelSprite("spr_health_pickup", new Color(0.35f, 1f, 0.55f), new Color(0.12f, 0.35f, 0.22f));
+        // Oxygen icon is intentionally different (transparent outside, circular) so it doesn't look like resource nodes.
+        Sprite oxygenPickupSprite = CreateOxygenPixelSprite("spr_oxygen_pickup", new Color(0.55f, 0.95f, 1f), new Color(0.12f, 0.35f, 0.55f));
 
         GameObject resourceItemPrefab = CreateResourceItemPrefab(itemSprite);
         GameObject bulletPrefab = CreateBulletPrefab(bulletSprite);
         GameObject enemyPrefab = CreateEnemyPrefab(enemySprite);
         GameObject resourceNodePrefab = CreateResourceNodePrefab(nodeSprite, resourceItemPrefab);
         GameObject healthPickupPrefab = CreateHealthPickupPrefab(healthPickupSprite);
+        GameObject oxygenPickupPrefab = CreateOxygenPickupPrefab(oxygenPickupSprite);
         GameObject rowPrefab = CreateUpgradeRowPrefab();
         GameObject playerPrefab = CreatePlayerPrefab(CreatePixelSprite("spr_player", new Color(0.4f, 0.8f, 1f), new Color(0.12f, 0.22f, 0.35f)), bulletPrefab);
         GameObject hudPrefab = CreateHudCanvasPrefab(rowPrefab);
-        GameObject gameSystemsPrefab = CreateGameSystemsPrefab(enemyPrefab, resourceNodePrefab, bulletPrefab);
+        GameObject gameSystemsPrefab = CreateGameSystemsPrefab(enemyPrefab, resourceNodePrefab, bulletPrefab, oxygenPickupPrefab);
 
         Selection.activeObject = gameSystemsPrefab != null ? gameSystemsPrefab : rowPrefab;
-        Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, HealthPickup, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
+        Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, HealthPickup, OxygenPickup, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
     }
 
     private static GameObject CreateHealthPickupPrefab(Sprite healthSprite)
@@ -59,6 +62,25 @@ public static class GenerateCorePrefabs2D
         root.AddComponent<HealthPickup>();
 
         string path = PrefabDir + "/HealthPickup.prefab";
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+        Object.DestroyImmediate(root);
+        return prefab;
+    }
+
+    private static GameObject CreateOxygenPickupPrefab(Sprite oxygenSprite)
+    {
+        GameObject root = new GameObject("OxygenPickup");
+        SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+        renderer.sprite = oxygenSprite;
+        renderer.sortingOrder = 1;
+
+        CircleCollider2D col = root.AddComponent<CircleCollider2D>();
+        col.isTrigger = true;
+        col.radius = 0.5f;
+
+        root.AddComponent<OxygenPickup>();
+
+        string path = PrefabDir + "/OxygenPickup.prefab";
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
         Object.DestroyImmediate(root);
         return prefab;
@@ -227,6 +249,7 @@ public static class GenerateCorePrefabs2D
         BuildSpawnPointsIfMissing(spawnPointsRoot);
         SnapSpawnPointsToGround(spawnPointsRoot);
         SpawnHealthPickups(levelRoot.transform, spawnPointsRoot);
+        SpawnOxygenPickups(levelRoot.transform, spawnPointsRoot);
         PositionPlayerAtSpawn();
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
@@ -316,6 +339,113 @@ public static class GenerateCorePrefabs2D
         // in case one happens to overlap an ore.
         int maxPickups = 2;
         int spawnedCount = 0;
+        // Oxygen should not use the same candidate X positions as health.
+        // Using a candidate list + random pick gives a more varied layout.
+        List<Vector3> pickupCandidates = new List<Vector3>
+        {
+            new Vector3(-60f, tier1Y + 2.2f, 0f),
+            new Vector3(-70f, tier2Y + 2.2f, 0f),
+            new Vector3(-25f, tier2Y + 2.2f, 0f),
+            new Vector3(0f,   tier3Y + 2.2f, 0f),
+            new Vector3(15f,  tier3Y + 2.2f, 0f),
+            new Vector3(45f,  tier4Y + 2.2f, 0f),
+            new Vector3(60f,  tier4Y + 2.2f, 0f),
+        };
+
+        while (pickupCandidates.Count > 0 && spawnedCount < maxPickups)
+        {
+            int idx = UnityEngine.Random.Range(0, pickupCandidates.Count);
+            Vector3 guess = pickupCandidates[idx];
+            pickupCandidates.RemoveAt(idx);
+
+            // Skip if too close to an ore spawn point.
+            bool overlapsOre = false;
+            for (int j = 0; j < resourceSpawnPositions.Length; j++)
+            {
+                if (Vector3.Distance(new Vector3(guess.x, guess.y, guess.z), resourceSpawnPositions[j]) <= avoidResourceRadius)
+                {
+                    overlapsOre = true;
+                    break;
+                }
+            }
+            if (overlapsOre)
+            {
+                continue;
+            }
+
+            Vector2 origin = new Vector2(guess.x, guess.y + 10f);
+            RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 25f, mask);
+            if (!hit.collider) continue;
+
+            float surfaceY = hit.point.y;
+            float yOffset = 0.7f; // slightly above the platform surface
+            Vector3 finalPos = new Vector3(guess.x, surfaceY + yOffset, guess.z);
+
+            GameObject instance = PrefabUtility.InstantiatePrefab(healthPickupPrefab) as GameObject;
+            if (instance == null) continue;
+
+            instance.transform.SetPositionAndRotation(finalPos, Quaternion.identity);
+            instance.transform.SetParent(healthRoot, true);
+            Undo.RegisterCreatedObjectUndo(instance, "Spawn HealthPickup");
+            spawnedCount++;
+        }
+    }
+
+    private static void SpawnOxygenPickups(Transform levelRootTransform, Transform spawnPointsRoot)
+    {
+        if (levelRootTransform == null) return;
+
+        GameObject oxygenPickupPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabDir + "/OxygenPickup.prefab");
+        if (oxygenPickupPrefab == null) return;
+
+        Transform oxygenRoot = EnsureChild(levelRootTransform, "OxygenPickups");
+        ClearChildren(oxygenRoot);
+
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        if (groundLayer < 0) return;
+        LayerMask mask = 1 << groundLayer;
+
+        // Avoid placing pickups on top of ore/resource spawn locations.
+        float avoidResourceRadius = 2.5f;
+        Vector3[] resourceSpawnPositions = new Vector3[0];
+        if (spawnPointsRoot != null)
+        {
+            SpawnPoint2D[] all = spawnPointsRoot.GetComponentsInChildren<SpawnPoint2D>(true);
+            System.Collections.Generic.List<Vector3> list = new System.Collections.Generic.List<Vector3>();
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] != null && all[i].Type == SpawnPoint2D.SpawnType.Resource)
+                {
+                    list.Add(all[i].transform.position);
+                }
+            }
+            resourceSpawnPositions = list.ToArray();
+        }
+
+        // Also avoid overlapping with already placed health pickups.
+        Transform healthRoot = levelRootTransform.Find("HealthPickups");
+        Vector3[] placedPickupPositions = new Vector3[0];
+        if (healthRoot != null)
+        {
+            List<Vector3> list = new List<Vector3>();
+            for (int i = 0; i < healthRoot.childCount; i++)
+            {
+                Transform c = healthRoot.GetChild(i);
+                if (c != null) list.Add(c.position);
+            }
+            placedPickupPositions = list.ToArray();
+        }
+
+        // Match the tier spacing used by BuildPlatformsIfMissing().
+        float tier1Y = 0f;
+        float tier2Y = 3f;
+        float tier3Y = 6f;
+        float tier4Y = 9f;
+
+        // As rare as health pickups.
+        int maxPickups = 2;
+        int spawnedCount = 0;
+
         Vector3[] pickupSpawnPositions =
         {
             new Vector3(-45f, tier1Y + 2.2f, 0f),
@@ -348,6 +478,21 @@ public static class GenerateCorePrefabs2D
                 continue;
             }
 
+            // Skip if too close to an already placed health pickup.
+            bool overlapsHealth = false;
+            for (int j = 0; j < placedPickupPositions.Length; j++)
+            {
+                if (Vector3.Distance(guess, placedPickupPositions[j]) <= 1.0f)
+                {
+                    overlapsHealth = true;
+                    break;
+                }
+            }
+            if (overlapsHealth)
+            {
+                continue;
+            }
+
             Vector2 origin = new Vector2(guess.x, guess.y + 10f);
             RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 25f, mask);
             if (!hit.collider) continue;
@@ -356,12 +501,12 @@ public static class GenerateCorePrefabs2D
             float yOffset = 0.7f; // slightly above the platform surface
             Vector3 finalPos = new Vector3(guess.x, surfaceY + yOffset, guess.z);
 
-            GameObject instance = PrefabUtility.InstantiatePrefab(healthPickupPrefab) as GameObject;
+            GameObject instance = PrefabUtility.InstantiatePrefab(oxygenPickupPrefab) as GameObject;
             if (instance == null) continue;
 
             instance.transform.SetPositionAndRotation(finalPos, Quaternion.identity);
-            instance.transform.SetParent(healthRoot, true);
-            Undo.RegisterCreatedObjectUndo(instance, "Spawn HealthPickup");
+            instance.transform.SetParent(oxygenRoot, true);
+            Undo.RegisterCreatedObjectUndo(instance, "Spawn OxygenPickup");
             spawnedCount++;
         }
     }
@@ -454,9 +599,9 @@ public static class GenerateCorePrefabs2D
             "Weapon Damage",
             "Increase bullet and melee damage.",
             UpgradeEffectType.IncreaseDamage,
-            1,
+            2,
             5,
-            new[] { new UpgradeCostTemplate("Iron", 4), new UpgradeCostTemplate("FuelCell", 1) }
+            new[] { new UpgradeCostTemplate("Iron", 4), new UpgradeCostTemplate("Crystal", 1) }
         );
 
         UpgradeDefinition mining = CreateUpgradeDefinitionAsset(
@@ -470,6 +615,22 @@ public static class GenerateCorePrefabs2D
             new[] { new UpgradeCostTemplate("Iron", 2), new UpgradeCostTemplate("Crystal", 2) }
         );
 
+        UpgradeDefinition ultraDamage = CreateUpgradeDefinitionAsset(
+            "Assets/Data/Upgrades/upgrade_uranium_damage.asset",
+            "upgrade.uranium_damage",
+            "Omega Weaponry",
+            "High-tier damage upgrades using ultra-rare ore.",
+            UpgradeEffectType.IncreaseDamage,
+            4,
+            3,
+            new[]
+            {
+                new UpgradeCostTemplate("Iron", 8),
+                new UpgradeCostTemplate("Crystal", 2),
+                new UpgradeCostTemplate("Uranium", 1)
+            }
+        );
+
         GameObject systems = FindInScene("GameSystems");
         if (systems != null)
         {
@@ -479,7 +640,8 @@ public static class GenerateCorePrefabs2D
                 SerializedObject so = new SerializedObject(baseSystem);
                 SerializedProperty upgradesProp = so.FindProperty("availableUpgrades");
                 upgradesProp.arraySize = 0;
-                List<UpgradeDefinition> defs = new List<UpgradeDefinition> { health, damage, mining };
+                // Order matters for the death menu slots: Option C should be weapon damage.
+                List<UpgradeDefinition> defs = new List<UpgradeDefinition> { health, mining, damage, ultraDamage };
                 int idx = 0;
                 for (int i = 0; i < defs.Count; i++)
                 {
@@ -866,7 +1028,7 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateGameSystemsPrefab(GameObject enemyPrefab, GameObject resourceNodePrefab, GameObject bulletPrefab)
+    private static GameObject CreateGameSystemsPrefab(GameObject enemyPrefab, GameObject resourceNodePrefab, GameObject bulletPrefab, GameObject oxygenPickupPrefab)
     {
         GameObject root = new GameObject("GameSystems");
         GameManager gameManager = root.AddComponent<GameManager>();
@@ -892,6 +1054,7 @@ public static class GenerateCorePrefabs2D
         spawnerSO.FindProperty("enemyPrefab").objectReferenceValue = enemyPrefab;
         spawnerSO.FindProperty("resourceNodePrefab").objectReferenceValue = resourceNodePrefab;
         spawnerSO.FindProperty("bulletPrefab").objectReferenceValue = bulletPrefab;
+        spawnerSO.FindProperty("oxygenPickupPrefab").objectReferenceValue = oxygenPickupPrefab;
         spawnerSO.FindProperty("spawnedEnemiesRoot").objectReferenceValue = enemiesRoot;
         spawnerSO.FindProperty("spawnedResourcesRoot").objectReferenceValue = resourcesRoot;
         spawnerSO.ApplyModifiedPropertiesWithoutUndo();
@@ -1092,6 +1255,44 @@ public static class GenerateCorePrefabs2D
         return CreateFallbackSprite(name, fill, border);
     }
 
+    private static Sprite CreateOxygenPixelSprite(string name, Color fill, Color border)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Always write the oxygen sprite so changes to the pixel pattern take effect.
+        WriteOxygenPixelPng(fullPath, fill, border);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        if (loaded != null)
+        {
+            return loaded;
+        }
+
+        // Fallback: use the default square sprite if something went wrong.
+        return CreateFallbackSprite(name, fill, border);
+    }
+
     private static void EnsureDir(string path)
     {
         if (!AssetDatabase.IsValidFolder(path))
@@ -1131,6 +1332,57 @@ public static class GenerateCorePrefabs2D
             {
                 bool isBorder = x <= 1 || x >= 14 || y <= 1 || y >= 14;
                 tex.SetPixel(x, y, isBorder ? border : fill);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteOxygenPixelPng(string fullPath, Color fill, Color border)
+    {
+        Texture2D tex = new Texture2D(16, 16, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        tex.name = "oxygen_tex";
+
+        Vector2 center = new Vector2(7.5f, 7.5f);
+        float innerRadius = 5.0f;
+        float outerRadius = 7.0f;
+
+        for (int y = 0; y < 16; y++)
+        {
+            for (int x = 0; x < 16; x++)
+            {
+                float dx = x - center.x;
+                float dy = y - center.y;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                // Make everything outside the circle transparent.
+                if (dist > outerRadius)
+                {
+                    tex.SetPixel(x, y, new Color(0f, 0f, 0f, 0f));
+                    continue;
+                }
+
+                // Border ring.
+                if (dist > innerRadius)
+                {
+                    tex.SetPixel(x, y, border);
+                    continue;
+                }
+
+                // Inner core + a tiny "cross" highlight to differentiate from resource nodes.
+                Color c = fill;
+                bool highlight = Mathf.Abs(dx) <= 1.0f || Mathf.Abs(dy) <= 1.0f;
+                if (highlight)
+                {
+                    c = Color.Lerp(fill, Color.white, 0.35f);
+                }
+
+                tex.SetPixel(x, y, c);
             }
         }
 
@@ -1375,6 +1627,14 @@ public static class GenerateCorePrefabs2D
             float stripXMax,
             bool crystalForThisStrip)
         {
+            // Extremely rare ore: should appear far less often than Crystal.
+            float uraniumChance = 0f;
+            if (tierTag.StartsWith("T2")) uraniumChance = 0.015f;
+            else if (tierTag.StartsWith("T3")) uraniumChance = 0.04f;
+            else if (tierTag.StartsWith("T4")) uraniumChance = 0.07f;
+
+            bool uraniumPlacedThisStrip = false;
+
             float clampedMin = stripXMin + edgePadding;
             float clampedMax = stripXMax - edgePadding;
             if (clampedMax < clampedMin)
@@ -1395,7 +1655,16 @@ public static class GenerateCorePrefabs2D
             for (int o = 0; o < oreCount; o++)
             {
                 float x = UnityEngine.Random.Range(clampedMin, clampedMax);
-                string resourceName = crystalForThisStrip ? "ResourceSpawn_Crystal_" : "ResourceSpawn_Iron_";
+                string resourceName;
+                if (!uraniumPlacedThisStrip && UnityEngine.Random.value <= uraniumChance)
+                {
+                    resourceName = "ResourceSpawn_Uranium_";
+                    uraniumPlacedThisStrip = true;
+                }
+                else
+                {
+                    resourceName = crystalForThisStrip ? "ResourceSpawn_Crystal_" : "ResourceSpawn_Iron_";
+                }
                 CreateSpawnPoint(
                     spawnPointsRoot,
                     resourceName + tierTag + "_" + (oreIndex++).ToString(),

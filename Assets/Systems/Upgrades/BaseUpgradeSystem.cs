@@ -42,20 +42,23 @@ public class BaseUpgradeSystem : MonoBehaviour
             availableUpgrades = new List<UpgradeDefinition>();
         }
 
-        // Ensure we always have 3 baseline upgrade options for the death menu.
+        // Ensure we always have baseline upgrade options for the death menu.
         // (Some prefabs/scenes may serialize this list empty; without this, only 1-2 upgrades show up.)
         bool hasHealth = HasUpgradeId("upgrade.max_health");
-        bool hasDamage = HasUpgradeId("upgrade.damage");
         bool hasMining = HasUpgradeId("upgrade.mining");
-
-        if (hasHealth && hasDamage && hasMining)
-        {
-            return;
-        }
+        bool hasDamage = HasUpgradeId("upgrade.damage");
+        bool hasUltraDamage = HasUpgradeId("upgrade.uranium_damage");
 
         if (!hasHealth)
         {
             availableUpgrades.Add(BuildHealthUpgrade());
+        }
+
+        // Ordering matters for the death menu slots (Option A/B/C take the first 3).
+        // We want Option C to be weapon damage.
+        if (!hasMining)
+        {
+            availableUpgrades.Add(BuildMiningUpgrade());
         }
 
         if (!hasDamage)
@@ -63,10 +66,61 @@ public class BaseUpgradeSystem : MonoBehaviour
             availableUpgrades.Add(BuildDamageUpgrade());
         }
 
-        if (!hasMining)
+        if (!hasUltraDamage)
         {
-            availableUpgrades.Add(BuildMiningUpgrade());
+            availableUpgrades.Add(BuildUraniumDamageUpgrade());
         }
+
+        // Reorder known upgrades so Option C is weapon damage.
+        // (Keep any other custom upgrades after these.)
+        availableUpgrades = ReorderByPriority(
+            availableUpgrades,
+            new[]
+            {
+                "upgrade.max_health",
+                "upgrade.mining",
+                "upgrade.damage",
+                "upgrade.uranium_damage"
+            }
+        );
+    }
+
+    private static List<UpgradeDefinition> ReorderByPriority(List<UpgradeDefinition> input, string[] priorityIds)
+    {
+        List<UpgradeDefinition> output = new List<UpgradeDefinition>();
+        HashSet<UpgradeDefinition> added = new HashSet<UpgradeDefinition>();
+
+        if (input == null) return output;
+
+        for (int p = 0; p < priorityIds.Length; p++)
+        {
+            string id = priorityIds[p];
+            if (string.IsNullOrWhiteSpace(id)) continue;
+
+            for (int i = 0; i < input.Count; i++)
+            {
+                UpgradeDefinition def = input[i];
+                if (def == null) continue;
+                if (added.Contains(def)) continue;
+                if (def.upgradeId == id)
+                {
+                    output.Add(def);
+                    added.Add(def);
+                    break;
+                }
+            }
+        }
+
+        for (int i = 0; i < input.Count; i++)
+        {
+            UpgradeDefinition def = input[i];
+            if (def == null) continue;
+            if (added.Contains(def)) continue;
+            output.Add(def);
+            added.Add(def);
+        }
+
+        return output;
     }
 
     private bool HasUpgradeId(string upgradeId)
@@ -145,6 +199,25 @@ public class BaseUpgradeSystem : MonoBehaviour
         {
             new UpgradeDefinition.ResourceCost { resourceId = "Iron", amount = 2 },
             new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 2 }
+        };
+        return def;
+    }
+
+    private static UpgradeDefinition BuildUraniumDamageUpgrade()
+    {
+        UpgradeDefinition def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+        def.name = "RuntimeDefault_UraniumDamage";
+        def.upgradeId = "upgrade.uranium_damage";
+        def.displayName = "Omega Weaponry";
+        def.description = "High-tier damage upgrades using ultra-rare ore.";
+        def.effectType = UpgradeEffectType.IncreaseDamage;
+        def.effectAmountPerLevel = 4;
+        def.maxLevel = 3;
+        def.resourceCosts = new List<UpgradeDefinition.ResourceCost>
+        {
+            new UpgradeDefinition.ResourceCost { resourceId = "Iron", amount = 8 },
+            new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 2 },
+            new UpgradeDefinition.ResourceCost { resourceId = "Uranium", amount = 1 }
         };
         return def;
     }
