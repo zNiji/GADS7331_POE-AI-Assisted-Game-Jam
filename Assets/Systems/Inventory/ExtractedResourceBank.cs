@@ -101,6 +101,33 @@ public class ExtractedResourceBank : MonoBehaviour
         return bankedResources;
     }
 
+    public void ReplaceBankedResources(IReadOnlyDictionary<string, int> resources)
+    {
+        bankedResources.Clear();
+
+        if (resources != null)
+        {
+            foreach (KeyValuePair<string, int> kvp in resources)
+            {
+                if (string.IsNullOrWhiteSpace(kvp.Key) || kvp.Value <= 0) continue;
+                bankedResources[kvp.Key] = kvp.Value;
+            }
+        }
+
+        Save();
+    }
+
+    public void ClearAllBankedResources(bool alsoDeletePersistedKey)
+    {
+        bankedResources.Clear();
+
+        if (alsoDeletePersistedKey)
+        {
+            PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.Save();
+        }
+    }
+
     private void Save()
     {
         SaveData data = new SaveData();

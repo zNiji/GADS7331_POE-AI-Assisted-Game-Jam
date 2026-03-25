@@ -78,12 +78,12 @@ public class InventoryPauseMenuUI : MonoBehaviour
                 new Vector2(0f, 70f),
                 26,
                 TextAnchor.MiddleCenter,
-                new Vector2(520f, 120f)
+                new Vector2(520f, 150f)
             );
         }
         else
         {
-            ApplyTextLayout(runInventoryText, "RunInventoryText", new Vector2(0f, 70f), 26, TextAnchor.MiddleCenter, new Vector2(520f, 120f));
+            ApplyTextLayout(runInventoryText, "RunInventoryText", new Vector2(0f, 70f), 26, TextAnchor.MiddleCenter, new Vector2(520f, 150f));
         }
 
         if (bankedInventoryText == null)
@@ -93,12 +93,12 @@ public class InventoryPauseMenuUI : MonoBehaviour
                 new Vector2(0f, -25f),
                 22,
                 TextAnchor.MiddleCenter,
-                new Vector2(520f, 120f)
+                new Vector2(520f, 170f)
             );
         }
         else
         {
-            ApplyTextLayout(bankedInventoryText, "BankedInventoryText", new Vector2(0f, -25f), 22, TextAnchor.MiddleCenter, new Vector2(520f, 120f));
+            ApplyTextLayout(bankedInventoryText, "BankedInventoryText", new Vector2(0f, -25f), 22, TextAnchor.MiddleCenter, new Vector2(520f, 170f));
         }
     }
 
@@ -130,6 +130,8 @@ public class InventoryPauseMenuUI : MonoBehaviour
         text.fontSize = fontSize;
         text.alignment = anchor;
         text.color = Color.white;
+        text.resizeTextForBestFit = false; // prevent best-fit scaling from causing line overlap
+        text.lineSpacing = 1.15f;
         text.horizontalOverflow = HorizontalWrapMode.Overflow;
         text.verticalOverflow = VerticalWrapMode.Overflow;
     }

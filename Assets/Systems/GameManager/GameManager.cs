@@ -83,6 +83,9 @@ public class GameManager : MonoBehaviour
         // Start a fresh run state in the newly loaded scene.
         // This avoids "ores only" / stale camera & references after returning to main menu.
         ResetRun();
+
+        // If the player chose a save slot from the main menu, restore the run state now.
+        GameSaveSystem.TryLoadPendingSlotIntoWorld();
     }
 
     private void RefreshPlayerSpawnPosition()

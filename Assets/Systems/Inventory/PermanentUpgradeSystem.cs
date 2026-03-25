@@ -126,4 +126,26 @@ public class PermanentUpgradeSystem : MonoBehaviour
             permanentUpgradeLevels[entry.id] = Mathf.Max(0, entry.level);
         }
     }
+
+    public void ClearAllPermanentUpgrades(bool alsoDeletePersistedKey)
+    {
+        permanentUpgradeLevels.Clear();
+
+        if (alsoDeletePersistedKey)
+        {
+            PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.Save();
+        }
+        else
+        {
+            // Keep key, but update it to an empty set.
+            Save();
+        }
+
+        // Reapply so any currently active scene reflects the reset.
+        if (BaseUpgradeSystem.Instance != null)
+        {
+            BaseUpgradeSystem.Instance.ReapplyAllUpgradeEffects(true);
+        }
+    }
 }

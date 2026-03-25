@@ -29,8 +29,124 @@ public class BaseUpgradeSystem : MonoBehaviour
 
     private void Start()
     {
+        EnsureDefaultUpgrades();
+
         // On initial scene load we want current health to match the (possibly upgraded) max health.
         ReapplyAllUpgradeEffects(true);
+    }
+
+    private void EnsureDefaultUpgrades()
+    {
+        if (availableUpgrades == null)
+        {
+            availableUpgrades = new List<UpgradeDefinition>();
+        }
+
+        // Ensure we always have 3 baseline upgrade options for the death menu.
+        // (Some prefabs/scenes may serialize this list empty; without this, only 1-2 upgrades show up.)
+        bool hasHealth = HasUpgradeId("upgrade.max_health");
+        bool hasDamage = HasUpgradeId("upgrade.damage");
+        bool hasMining = HasUpgradeId("upgrade.mining");
+
+        if (hasHealth && hasDamage && hasMining)
+        {
+            return;
+        }
+
+        if (!hasHealth)
+        {
+            availableUpgrades.Add(BuildHealthUpgrade());
+        }
+
+        if (!hasDamage)
+        {
+            availableUpgrades.Add(BuildDamageUpgrade());
+        }
+
+        if (!hasMining)
+        {
+            availableUpgrades.Add(BuildMiningUpgrade());
+        }
+    }
+
+    private bool HasUpgradeId(string upgradeId)
+    {
+        if (string.IsNullOrWhiteSpace(upgradeId))
+        {
+            return false;
+        }
+
+        if (availableUpgrades == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < availableUpgrades.Count; i++)
+        {
+            UpgradeDefinition def = availableUpgrades[i];
+            if (def != null && def.upgradeId == upgradeId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static UpgradeDefinition BuildHealthUpgrade()
+    {
+        UpgradeDefinition def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+        def.name = "RuntimeDefault_Health";
+        def.upgradeId = "upgrade.max_health";
+        def.displayName = "Max Health";
+        def.description = "Increase suit integrity for longer runs.";
+        def.effectType = UpgradeEffectType.IncreaseMaxHealth;
+        def.effectAmountPerLevel = 15;
+        def.maxLevel = 5;
+        def.resourceCosts = new List<UpgradeDefinition.ResourceCost>
+        {
+            new UpgradeDefinition.ResourceCost { resourceId = "Iron", amount = 3 },
+            new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 1 }
+        };
+        return def;
+    }
+
+    private static UpgradeDefinition BuildDamageUpgrade()
+    {
+        UpgradeDefinition def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+        def.name = "RuntimeDefault_Damage";
+        def.upgradeId = "upgrade.damage";
+        def.displayName = "Weapon Damage";
+        def.description = "Increase bullet and melee damage.";
+        def.effectType = UpgradeEffectType.IncreaseDamage;
+        // Stronger per level than the old FuelCell-based definition.
+        def.effectAmountPerLevel = 2;
+        def.maxLevel = 5;
+        // Balance: use only extracted resources (Iron/Crystal), since FuelCell may be unavailable.
+        def.resourceCosts = new List<UpgradeDefinition.ResourceCost>
+        {
+            new UpgradeDefinition.ResourceCost { resourceId = "Iron", amount = 4 },
+            new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 1 }
+        };
+        return def;
+    }
+
+    private static UpgradeDefinition BuildMiningUpgrade()
+    {
+        UpgradeDefinition def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+        def.name = "RuntimeDefault_Mining";
+        def.upgradeId = "upgrade.mining";
+        def.displayName = "Mining Power";
+        def.description = "Mine resource nodes faster.";
+        def.effectType = UpgradeEffectType.IncreaseMiningSpeed;
+        def.effectAmountPerLevel = 1;
+        def.maxLevel = 5;
+        def.resourceCosts = new List<UpgradeDefinition.ResourceCost>
+        {
+            new UpgradeDefinition.ResourceCost { resourceId = "Iron", amount = 2 },
+            new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 2 }
+        };
+        return def;
     }
 
     public int GetCurrentLevel(UpgradeDefinition definition)

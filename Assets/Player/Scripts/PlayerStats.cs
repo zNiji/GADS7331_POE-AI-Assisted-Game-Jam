@@ -125,6 +125,17 @@ public class PlayerStats : MonoBehaviour, IDamageable
         OnOxygenChanged?.Invoke(currentOxygen, maxOxygen);
     }
 
+    public void SetCurrentHealthAndOxygen(float health, float oxygen)
+    {
+        // Used by save/load to restore exact run state.
+        isDead = false;
+        currentHealth = Mathf.Clamp(health, 0f, maxHealth);
+        currentOxygen = Mathf.Clamp(oxygen, 0f, maxOxygen);
+
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+        OnOxygenChanged?.Invoke(currentOxygen, maxOxygen);
+    }
+
     public void AddMaxHealth(float amount, bool healByAmount)
     {
         if (amount <= 0f)

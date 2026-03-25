@@ -16,10 +16,10 @@ MonoBehaviour:
   displayName: Weapon Damage
   description: Increase bullet and melee damage.
   effectType: 2
-  effectAmountPerLevel: 1
+  effectAmountPerLevel: 2
   maxLevel: 5
   resourceCosts:
   - resourceId: Iron
     amount: 4
-  - resourceId: FuelCell
+  - resourceId: Crystal
     amount: 1
