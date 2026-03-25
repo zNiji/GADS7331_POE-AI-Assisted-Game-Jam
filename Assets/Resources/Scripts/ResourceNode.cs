@@ -24,6 +24,17 @@ public class ResourceNode : MonoBehaviour, IRunResettable
 
     public string ResourceId => resourceId;
 
+    // Allows the level spawner/editor tooling to configure which resource this node mines.
+    public void SetResourceId(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return;
+        }
+
+        resourceId = id;
+    }
+
     private void Awake()
     {
         currentHealth = maxHealth;

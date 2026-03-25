@@ -6,6 +6,10 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private GameObject enemyPrefab;
     [SerializeField] private GameObject resourceNodePrefab;
 
+    [Header("Resource Mapping (via SpawnPoint2D.spawnId)")]
+    [SerializeField] private string defaultResourceId = "Iron";
+    [SerializeField] private string crystalResourceId = "Crystal";
+
     [Header("Behavior")]
     [SerializeField] private bool spawnOnStart = true;
     [SerializeField] private bool clearSpawnedOnRespawn = true;
@@ -49,9 +53,43 @@ public class LevelSetupSpawner : MonoBehaviour
             {
                 continue;
             }
+            
+            GameObject spawned = Instantiate(prefab, point.transform.position, Quaternion.identity, parent);
 
-            Instantiate(prefab, point.transform.position, Quaternion.identity, parent);
+            if (type == SpawnPoint2D.SpawnType.Resource)
+            {
+                ResourceNode node = spawned != null ? spawned.GetComponent<ResourceNode>() : null;
+                if (node != null)
+                {
+                    node.SetResourceId(DetermineResourceId(point));
+                }
+            }
         }
+    }
+
+    private string DetermineResourceId(SpawnPoint2D point)
+    {
+        if (point == null)
+        {
+            return defaultResourceId;
+        }
+
+        string idHint = point.SpawnId;
+        if (!string.IsNullOrWhiteSpace(idHint))
+        {
+            string lower = idHint.ToLowerInvariant();
+            if (lower.Contains("crystal"))
+            {
+                return crystalResourceId;
+            }
+
+            if (lower.Contains("iron"))
+            {
+                return defaultResourceId;
+            }
+        }
+
+        return defaultResourceId;
     }
 
     private static void ClearChildren(Transform root)

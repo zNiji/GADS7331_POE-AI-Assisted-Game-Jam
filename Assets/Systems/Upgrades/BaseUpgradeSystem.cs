@@ -50,7 +50,74 @@ public class BaseUpgradeSystem : MonoBehaviour
 
     public bool CanAfford(UpgradeDefinition definition)
     {
-        if (definition == null || InventorySystem.Instance == null)
+        if (definition == null)
+        {
+            return false;
+        }
+        return CanAffordWithBank(definition) || CanAffordWithRunInventory(definition);
+    }
+
+    public bool TryPurchaseUpgrade(UpgradeDefinition definition)
+    {
+        if (definition == null || IsMaxLevel(definition) || !CanAfford(definition) || PermanentUpgradeSystem.Instance == null)
+        {
+            return false;
+        }
+        // Prefer banked resources when available, otherwise spend run inventory.
+        return CanAffordWithBank(definition)
+            ? TryPurchaseFromBank(definition)
+            : TryPurchaseFromRunInventory(definition);
+    }
+
+    // Death menu: ONLY spend extracted/banked resources (never run inventory).
+    public bool CanAffordExtractedOnly(UpgradeDefinition definition)
+    {
+        return definition != null && CanAffordWithBank(definition);
+    }
+
+    public bool TryPurchaseUpgradeExtractedOnly(UpgradeDefinition definition)
+    {
+        if (definition == null || IsMaxLevel(definition) || PermanentUpgradeSystem.Instance == null)
+        {
+            return false;
+        }
+
+        if (!CanAffordWithBank(definition))
+        {
+            return false;
+        }
+
+        return TryPurchaseFromBank(definition);
+    }
+
+    private bool CanAffordWithBank(UpgradeDefinition definition)
+    {
+        ExtractedResourceBank bank = ExtractedResourceBank.Instance;
+        if (bank == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < definition.resourceCosts.Count; i++)
+        {
+            UpgradeDefinition.ResourceCost cost = definition.resourceCosts[i];
+            if (string.IsNullOrWhiteSpace(cost.resourceId) || cost.amount <= 0)
+            {
+                continue;
+            }
+
+            if (bank.GetAmount(cost.resourceId) < cost.amount)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private bool CanAffordWithRunInventory(UpgradeDefinition definition)
+    {
+        if (InventorySystem.Instance == null)
         {
             return false;
         }
@@ -72,9 +139,37 @@ public class BaseUpgradeSystem : MonoBehaviour
         return true;
     }
 
-    public bool TryPurchaseUpgrade(UpgradeDefinition definition)
+    private bool TryPurchaseFromBank(UpgradeDefinition definition)
     {
-        if (definition == null || IsMaxLevel(definition) || !CanAfford(definition) || PermanentUpgradeSystem.Instance == null)
+        ExtractedResourceBank bank = ExtractedResourceBank.Instance;
+        if (bank == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < definition.resourceCosts.Count; i++)
+        {
+            UpgradeDefinition.ResourceCost cost = definition.resourceCosts[i];
+            if (string.IsNullOrWhiteSpace(cost.resourceId) || cost.amount <= 0)
+            {
+                continue;
+            }
+
+            if (!bank.TrySpendResource(cost.resourceId, cost.amount))
+            {
+                return false;
+            }
+        }
+
+        PermanentUpgradeSystem.Instance.AddUpgradeLevel(definition.upgradeId, 1);
+        ReapplyAllUpgradeEffects(false);
+        OnUpgradesChanged?.Invoke();
+        return true;
+    }
+
+    private bool TryPurchaseFromRunInventory(UpgradeDefinition definition)
+    {
+        if (InventorySystem.Instance == null)
         {
             return false;
         }

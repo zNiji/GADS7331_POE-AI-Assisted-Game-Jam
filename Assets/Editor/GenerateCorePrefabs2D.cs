@@ -195,6 +195,9 @@ public static class GenerateCorePrefabs2D
 
         Transform geometryRoot = EnsureChild(levelRoot.transform, "Geometry");
         Transform spawnPointsRoot = EnsureChild(levelRoot.transform, "SpawnPoints");
+        // Always rebuild so old spawn points/resources/enemies don't persist.
+        ClearChildren(geometryRoot);
+        ClearChildren(spawnPointsRoot);
 
         Sprite groundSprite = CreatePixelSprite("spr_ground_block", new Color(0.56f, 0.56f, 0.64f), new Color(0.26f, 0.26f, 0.34f));
         BuildGroundIfMissing(geometryRoot, groundSprite);
@@ -545,7 +548,7 @@ public static class GenerateCorePrefabs2D
         moveSO.FindProperty("moveSpeed").floatValue = 10.5f;
         moveSO.FindProperty("acceleration").floatValue = 45f;
         moveSO.FindProperty("deceleration").floatValue = 55f;
-        moveSO.FindProperty("jumpForce").floatValue = 15f;
+        moveSO.FindProperty("jumpForce").floatValue = 18f;
         moveSO.FindProperty("spriteRenderer").objectReferenceValue = renderer;
         moveSO.FindProperty("groundCheck").objectReferenceValue = groundCheck;
         moveSO.FindProperty("groundLayer").intValue = LayerMask.GetMask("Ground");
@@ -588,6 +591,36 @@ public static class GenerateCorePrefabs2D
         Text biomeText = CreateText("BiomeLabel", canvasGO.transform, new Vector2(20f, -250f), 16, TextAnchor.MiddleLeft);
         Text promptText = CreateCenteredText("PromptText", canvasGO.transform, new Vector2(0f, 120f), 20);
         Text extractionText = CreateCenteredText("ExtractionStatusText", canvasGO.transform, new Vector2(0f, 80f), 18);
+
+        // Extract button so players can bank materials at any time.
+        GameObject extractButtonGO = new GameObject("ExtractButton",
+            typeof(RectTransform), typeof(Image), typeof(Button), typeof(ExtractNowButtonUI));
+        extractButtonGO.transform.SetParent(canvasGO.transform, false);
+        RectTransform extractRt = extractButtonGO.GetComponent<RectTransform>();
+        extractRt.anchorMin = new Vector2(0.5f, 0f);
+        extractRt.anchorMax = new Vector2(0.5f, 0f);
+        extractRt.pivot = new Vector2(0.5f, 0f);
+        extractRt.sizeDelta = new Vector2(360f, 70f);
+        extractRt.anchoredPosition = new Vector2(0f, 180f);
+
+        Image extractImg = extractButtonGO.GetComponent<Image>();
+        extractImg.color = new Color(0.18f, 0.24f, 0.32f, 1f);
+
+        Button extractBtn = extractButtonGO.GetComponent<Button>();
+        if (extractBtn != null)
+        {
+            ColorBlock cb = extractBtn.colors;
+            cb.normalColor = extractImg.color;
+            cb.highlightedColor = new Color(0.26f, 0.34f, 0.46f, 1f);
+            cb.pressedColor = new Color(0.14f, 0.2f, 0.28f, 1f);
+            extractBtn.colors = cb;
+        }
+
+        Text extractBtnText = CreateCenteredText("ExtractButtonText", extractButtonGO.transform, Vector2.zero, 30);
+        RectTransform ebRt = extractBtnText.GetComponent<RectTransform>();
+        ebRt.sizeDelta = new Vector2(320f, 50f);
+        extractBtnText.text = "Extract (X)";
+
         Text debugText = CreateText("InventoryDebugText", canvasGO.transform, new Vector2(-320f, -120f), 14, TextAnchor.UpperLeft, new Vector2(350f, 300f), true);
 
         GameObject pausePanel = CreatePanel("PausePanel", canvasGO.transform, new Vector2(0f, 0f), new Vector2(500f, 260f), new Color(0f, 0f, 0f, 0.7f));
@@ -1033,6 +1066,23 @@ public static class GenerateCorePrefabs2D
         return go.transform;
     }
 
+    private static void ClearChildren(Transform root)
+    {
+        if (root == null)
+        {
+            return;
+        }
+
+        for (int i = root.childCount - 1; i >= 0; i--)
+        {
+            Transform child = root.GetChild(i);
+            if (child != null)
+            {
+                Undo.DestroyObjectImmediate(child.gameObject);
+            }
+        }
+    }
+
     private static void EnsureLayer(string layerName)
     {
         if (LayerMask.NameToLayer(layerName) != -1)
@@ -1065,7 +1115,7 @@ public static class GenerateCorePrefabs2D
         root.transform.SetParent(geometryRoot);
         root.transform.localPosition = Vector3.zero;
 
-        for (int x = -24; x <= 24; x++)
+        for (int x = -60; x <= 60; x++)
         {
             CreateBlock(root.transform, groundSprite, new Vector3(x, -3f, 0f), true);
             CreateBlock(root.transform, groundSprite, new Vector3(x, -4f, 0f), true);
@@ -1083,19 +1133,39 @@ public static class GenerateCorePrefabs2D
         root.transform.SetParent(geometryRoot);
         root.transform.localPosition = Vector3.zero;
 
-        for (int x = -10; x <= -4; x++)
-        {
-            CreateBlock(root.transform, groundSprite, new Vector3(x, -0.5f, 0f), true);
-        }
+        // Vertical exploration platforms with larger gaps between tiers.
+        float tier1Y = -1f;
+        float tier2Y = 2f;
+        float tier3Y = 5f;
+        float tier4Y = 8f;
 
-        for (int x = 3; x <= 9; x++)
-        {
-            CreateBlock(root.transform, groundSprite, new Vector3(x, 1.5f, 0f), true);
-        }
+        // Tier 1 (-1)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-55f, tier1Y, 0f), 30);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-5f, tier1Y, 0f), 20);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(25f, tier1Y, 0f), 20);
 
-        for (int x = 14; x <= 18; x++)
+        // Tier 2 (2)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-45f, tier2Y, 0f), 22);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-10f, tier2Y, 0f), 22);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(18f, tier2Y, 0f), 18);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(42f, tier2Y, 0f), 12);
+
+        // Tier 3 (5)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-28f, tier3Y, 0f), 26);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-2f, tier3Y, 0f), 26);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(20f, tier3Y, 0f), 16);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(38f, tier3Y, 0f), 10);
+
+        // Tier 4 (8)
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(-12f, tier4Y, 0f), 30);
+        CreatePlatformStrip(root.transform, groundSprite, new Vector3(22f, tier4Y, 0f), 14);
+    }
+
+    private static void CreatePlatformStrip(Transform root, Sprite sprite, Vector3 start, int length)
+    {
+        for (int i = 0; i < length; i++)
         {
-            CreateBlock(root.transform, groundSprite, new Vector3(x, -1f, 0f), true);
+            CreateBlock(root, sprite, start + new Vector3(i, 0f, 0f), true);
         }
     }
 
@@ -1105,13 +1175,42 @@ public static class GenerateCorePrefabs2D
         {
             return;
         }
+        // Enemies and resources should spawn ABOVE platform colliders,
+        // so the ore trigger isn't embedded "in the floor".
+        float tier1Y = -1f;
+        float tier2Y = 2f;
+        float tier3Y = 5f;
+        float tier4Y = 8f;
 
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_A", new Vector3(-6f, -2f, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_B", new Vector3(8f, 2f, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_C", new Vector3(16f, -0.2f, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_A", new Vector3(-2f, -2f, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_B", new Vector3(5f, 2.2f, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_C", new Vector3(13f, -0.2f, 0f), SpawnPoint2D.SpawnType.Resource);
+        float enemySpawnYOffset = 1.1f;
+        float resourceSpawnYOffset = 1.0f;
+
+        // Enemies across tiers
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_A", new Vector3(-40f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_B", new Vector3(-15f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_C", new Vector3(10f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_D", new Vector3(35f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_E", new Vector3(-28f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_F", new Vector3(-2f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_G", new Vector3(25f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_H", new Vector3(33f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_I", new Vector3(-18f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+
+        // Resources: Iron + Crystal (parsed from SpawnPoint2D.spawnId)
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_A", new Vector3(-45f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_B", new Vector3(-15f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_C", new Vector3(28f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_A", new Vector3(-35f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_B", new Vector3(-5f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_D", new Vector3(12f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_C", new Vector3(25f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_E", new Vector3(0f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_D", new Vector3(-20f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_E", new Vector3(-8f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_F", new Vector3(18f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
     }
 
     private static void PositionPlayerAtSpawn()
@@ -1122,7 +1221,8 @@ public static class GenerateCorePrefabs2D
             return;
         }
 
-        player.transform.position = new Vector3(-14f, -1.8f, 0f);
+        // Spawn away from the tier-1 enemy spawns to avoid immediate contact damage.
+        player.transform.position = new Vector3(0f, -2.2f, 0f);
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
         if (rb != null)
         {

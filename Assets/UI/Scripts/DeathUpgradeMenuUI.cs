@@ -112,6 +112,12 @@ public class DeathUpgradeMenuUI : MonoBehaviour
                 continue;
             }
 
+            // Death upgrades must consume extracted/banked resources only.
+            if (!upgradeSystem.CanAffordExtractedOnly(def))
+            {
+                continue;
+            }
+
             currentChoices.Add(def);
             if (currentChoices.Count >= 3)
             {
@@ -155,7 +161,7 @@ public class DeathUpgradeMenuUI : MonoBehaviour
         if (label != null)
         {
             int currentLevel = upgradeSystem != null ? upgradeSystem.GetCurrentLevel(def) : 0;
-            label.text = def.displayName + "  (Lv " + currentLevel + " -> " + (currentLevel + 1) + ")";
+            label.text = def.displayName + "\n(Lv " + currentLevel + " -> " + (currentLevel + 1) + ")\n" + BuildCostText(def);
         }
     }
 
@@ -163,7 +169,8 @@ public class DeathUpgradeMenuUI : MonoBehaviour
     {
         if (upgradeSystem != null && definition != null)
         {
-            upgradeSystem.TryApplyFreeUpgrade(definition);
+            // Uses extracted/banked resources only.
+            upgradeSystem.TryPurchaseUpgradeExtractedOnly(definition);
         }
 
         ContinueWithoutUpgrade();
@@ -187,5 +194,34 @@ public class DeathUpgradeMenuUI : MonoBehaviour
         {
             gameManager.CompleteDeathUpgradeAndRespawn();
         }
+    }
+
+    private static string BuildCostText(UpgradeDefinition definition)
+    {
+        if (definition == null || definition.resourceCosts == null || definition.resourceCosts.Count == 0)
+        {
+            return "Cost: Free";
+        }
+
+        string output = "Cost: ";
+        bool wroteAny = false;
+        for (int i = 0; i < definition.resourceCosts.Count; i++)
+        {
+            UpgradeDefinition.ResourceCost cost = definition.resourceCosts[i];
+            if (cost == null || string.IsNullOrWhiteSpace(cost.resourceId) || cost.amount <= 0)
+            {
+                continue;
+            }
+
+            if (wroteAny)
+            {
+                output += ", ";
+            }
+
+            output += cost.resourceId + " x" + cost.amount;
+            wroteAny = true;
+        }
+
+        return wroteAny ? output : "Cost: Free";
     }
 }

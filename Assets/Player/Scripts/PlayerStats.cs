@@ -11,11 +11,14 @@ public class PlayerStats : MonoBehaviour
     [SerializeField] private float oxygenDrainPerSecond = 1f;
     [SerializeField] private float damageShakeDuration = 0.12f;
     [SerializeField] private float damageShakeMagnitude = 0.12f;
+    [Header("Spawn Safety")]
+    [SerializeField] private float spawnDamageImmunitySeconds = 1f;
 
     private float currentHealth;
     private float currentOxygen;
     private bool isDead;
     private float baseMaxHealth;
+    private float invulnerableUntilTime;
 
     public event Action<float, float> OnHealthChanged;
     public event Action<float, float> OnOxygenChanged;
@@ -32,6 +35,7 @@ public class PlayerStats : MonoBehaviour
         currentHealth = maxHealth;
         currentOxygen = maxOxygen;
         isDead = false;
+        invulnerableUntilTime = Time.time + spawnDamageImmunitySeconds;
     }
 
     private void Start()
@@ -48,6 +52,11 @@ public class PlayerStats : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (amount <= 0f || isDead)
+        {
+            return;
+        }
+
+        if (Time.time < invulnerableUntilTime)
         {
             return;
         }
@@ -105,6 +114,7 @@ public class PlayerStats : MonoBehaviour
         isDead = false;
         currentHealth = maxHealth;
         currentOxygen = maxOxygen;
+        invulnerableUntilTime = Time.time + spawnDamageImmunitySeconds;
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
         OnOxygenChanged?.Invoke(currentOxygen, maxOxygen);
     }

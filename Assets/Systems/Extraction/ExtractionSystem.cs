@@ -15,6 +15,8 @@ public class ExtractionSystem : MonoBehaviour
     private bool extractionRequested;
     private float extractionCompleteTime;
 
+    public bool IsExtractionInProgress => extractionRequested;
+
     private void Awake()
     {
         if (playerStats == null)
@@ -43,7 +45,7 @@ public class ExtractionSystem : MonoBehaviour
     {
         if (!extractionRequested && Input.GetKeyDown(callExtractionKey))
         {
-            RequestExtraction();
+            TriggerExtraction();
             return;
         }
 
@@ -66,8 +68,13 @@ public class ExtractionSystem : MonoBehaviour
         CompleteExtraction();
     }
 
-    private void RequestExtraction()
+    public void TriggerExtraction()
     {
+        if (extractionRequested)
+        {
+            return;
+        }
+
         extractionRequested = true;
         extractionCompleteTime = Time.time + Mathf.Max(0.1f, extractionDelaySeconds);
 

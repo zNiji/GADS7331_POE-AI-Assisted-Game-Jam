@@ -28,6 +28,7 @@ public class GameManager : MonoBehaviour
 
         ResolveReferences();
         CacheRunResettables();
+        EnsureCameraRendering();
 
         if (playerTransform != null)
         {
@@ -35,6 +36,86 @@ public class GameManager : MonoBehaviour
                 ? playerSpawnPoint.position
                 : playerTransform.position;
         }
+    }
+
+    private void EnsureCameraRendering()
+    {
+        int desiredDisplay = GetDesiredDisplayIndex();
+
+        // Unity shows "No cameras rendering" when none of the cameras are enabled for the current display.
+        // Re-enable every camera we can find and force it to render to the desired display.
+        Camera[] all = FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            Camera c = all[i];
+            if (c == null) continue;
+
+            c.gameObject.SetActive(true);
+            c.enabled = true;
+
+            try { c.targetDisplay = desiredDisplay; } catch { /* ignore */ }
+
+            c.orthographic = true;
+            c.clearFlags = CameraClearFlags.SolidColor;
+            c.backgroundColor = new Color(0.18f, 0.2f, 0.27f, 1f);
+            c.cullingMask = ~0;
+            c.nearClipPlane = 0.01f;
+            c.farClipPlane = 100f;
+
+            Vector3 p = c.transform.position;
+            p.z = -10f;
+            c.transform.position = p;
+            c.transform.rotation = Quaternion.identity;
+        }
+
+        Camera camForFollow = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+        if (camForFollow == null)
+        {
+            GameObject camGO = new GameObject("PlayerCam");
+            try { camGO.tag = "MainCamera"; } catch { /* tag may not exist */ }
+            camForFollow = camGO.AddComponent<Camera>();
+            try { camForFollow.targetDisplay = desiredDisplay; } catch { /* ignore */ }
+
+            camForFollow.enabled = true;
+            camForFollow.orthographic = true;
+            camForFollow.clearFlags = CameraClearFlags.SolidColor;
+            camForFollow.backgroundColor = new Color(0.18f, 0.2f, 0.27f, 1f);
+            camForFollow.cullingMask = ~0;
+            camForFollow.nearClipPlane = 0.01f;
+            camForFollow.farClipPlane = 100f;
+
+            Vector3 p = camForFollow.transform.position;
+            p.z = -10f;
+            camForFollow.transform.position = p;
+            camForFollow.transform.rotation = Quaternion.identity;
+        }
+
+        CameraFollow2D follow = camForFollow.GetComponent<CameraFollow2D>();
+        if (follow == null)
+        {
+            follow = camForFollow.gameObject.AddComponent<CameraFollow2D>();
+        }
+
+        if (playerTransform != null)
+        {
+            follow.SetTarget(playerTransform);
+        }
+        else if (playerStats != null)
+        {
+            follow.SetTarget(playerStats.transform);
+        }
+    }
+
+    private static int GetDesiredDisplayIndex()
+    {
+        // If GameView is on Display 1, cameras targeting Display 0 won't render.
+        // Prefer Display 1 when it is active; otherwise fall back to Display 0.
+        if (Display.displays != null && Display.displays.Length > 1 && Display.displays[1] != null && Display.displays[1].active)
+        {
+            return 1;
+        }
+
+        return 0;
     }
 
     private void OnEnable()
@@ -75,6 +156,11 @@ public class GameManager : MonoBehaviour
     {
         IsPaused = pauseState;
         Time.timeScale = IsPaused ? 0f : 1f;
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(pauseState);
+        }
     }
 
     private void HandlePlayerDied()

@@ -70,6 +70,32 @@ public class ExtractedResourceBank : MonoBehaviour
         return bankedResources.TryGetValue(resourceId, out int amount) ? amount : 0;
     }
 
+    public bool TrySpendResource(string resourceId, int amount = 1)
+    {
+        if (string.IsNullOrWhiteSpace(resourceId) || amount <= 0)
+        {
+            return false;
+        }
+
+        if (!bankedResources.TryGetValue(resourceId, out int existing) || existing < amount)
+        {
+            return false;
+        }
+
+        int remaining = existing - amount;
+        if (remaining <= 0)
+        {
+            bankedResources.Remove(resourceId);
+        }
+        else
+        {
+            bankedResources[resourceId] = remaining;
+        }
+
+        Save();
+        return true;
+    }
+
     public IReadOnlyDictionary<string, int> GetAllBankedResources()
     {
         return bankedResources;

@@ -205,7 +205,7 @@ MonoBehaviour:
   moveSpeed: 10.5
   acceleration: 45
   deceleration: 55
-  jumpForce: 15
+  jumpForce: 18
   spriteRenderer: {fileID: 470217495156728468}
   groundCheck: {fileID: 64533173133370102}
   groundCheckRadius: 0.15
@@ -229,6 +229,7 @@ MonoBehaviour:
   oxygenDrainPerSecond: 1
   damageShakeDuration: 0.12
   damageShakeMagnitude: 0.12
+  spawnDamageImmunitySeconds: 1
 --- !u!114 &8452570713259099816
 MonoBehaviour:
   m_ObjectHideFlags: 0

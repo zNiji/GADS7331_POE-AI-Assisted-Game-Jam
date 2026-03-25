@@ -54,6 +54,21 @@ public class HUDController : MonoBehaviour
         SetExtractionStatus(string.Empty);
         SetBiome("Unknown Sector");
         SetPauseVisible(false);
+
+        EnsureInventoryPauseMenu();
+    }
+
+    private void EnsureInventoryPauseMenu()
+    {
+        if (pausePanel == null)
+        {
+            return;
+        }
+
+        if (pausePanel.GetComponent<InventoryPauseMenuUI>() == null)
+        {
+            pausePanel.AddComponent<InventoryPauseMenuUI>();
+        }
     }
 
     private void OnDisable()
