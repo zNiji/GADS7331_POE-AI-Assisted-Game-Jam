@@ -33,6 +33,11 @@ public class DeathUpgradeMenuUI : MonoBehaviour
 
     public void Show(GameManager owner)
     {
+        Show(owner, null, null);
+    }
+
+    public void Show(GameManager owner, string titleOverride, string descriptionOverride)
+    {
         gameManager = owner;
         if (upgradeSystem == null)
         {
@@ -44,14 +49,21 @@ public class DeathUpgradeMenuUI : MonoBehaviour
 
         if (titleText != null)
         {
-            titleText.text = "Run Failed";
+            titleText.text = string.IsNullOrWhiteSpace(titleOverride) ? "Run Failed" : titleOverride;
         }
 
         if (descriptionText != null)
         {
-            descriptionText.text = currentChoices.Count > 0
-                ? "Choose one permanent upgrade before redeploying."
-                : "No upgrades available. Continue to redeploy.";
+            if (!string.IsNullOrWhiteSpace(descriptionOverride))
+            {
+                descriptionText.text = descriptionOverride;
+            }
+            else
+            {
+                descriptionText.text = currentChoices.Count > 0
+                    ? "Choose one permanent upgrade before redeploying."
+                    : "No upgrades available. Continue to redeploy.";
+            }
         }
 
         if (menuRoot != null)

@@ -101,7 +101,7 @@ public class ExtractionSystem : MonoBehaviour
 
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.ResetRun();
+            GameManager.Instance.ShowUpgradeMenuAfterExtraction();
         }
     }
 

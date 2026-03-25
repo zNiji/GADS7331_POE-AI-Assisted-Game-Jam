@@ -203,11 +203,51 @@ public static class GenerateCorePrefabs2D
         BuildGroundIfMissing(geometryRoot, groundSprite);
         BuildPlatformsIfMissing(geometryRoot, groundSprite);
         BuildSpawnPointsIfMissing(spawnPointsRoot);
+        SnapSpawnPointsToGround(spawnPointsRoot);
         PositionPlayerAtSpawn();
 
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         Selection.activeObject = levelRoot;
         Debug.Log("Playable test level created: ground/platforms, spawn points, and camera follow ready.");
+    }
+
+    private static void SnapSpawnPointsToGround(Transform spawnPointsRoot)
+    {
+        if (spawnPointsRoot == null)
+        {
+            return;
+        }
+
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        if (groundLayer < 0)
+        {
+            return;
+        }
+
+        LayerMask mask = 1 << groundLayer;
+
+        SpawnPoint2D[] points = spawnPointsRoot.GetComponentsInChildren<SpawnPoint2D>(true);
+        for (int i = 0; i < points.Length; i++)
+        {
+            SpawnPoint2D sp = points[i];
+            if (sp == null)
+            {
+                continue;
+            }
+
+            Vector3 pos = sp.transform.position;
+            Vector2 origin = new Vector2(pos.x, pos.y + 10f);
+            RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 25f, mask);
+            if (!hit.collider)
+            {
+                continue;
+            }
+
+            float surfaceY = hit.point.y;
+            float yOffset = sp.Type == SpawnPoint2D.SpawnType.Resource ? 0.5f : 0.6f;
+
+            sp.transform.position = new Vector3(pos.x, surfaceY + yOffset, pos.z);
+        }
     }
 
     [MenuItem("Tools/Frontier Extraction/Fix Pink Sprites (Scene + Prefabs)")]
@@ -1134,10 +1174,12 @@ public static class GenerateCorePrefabs2D
         root.transform.localPosition = Vector3.zero;
 
         // Vertical exploration platforms with larger gaps between tiers.
-        float tier1Y = -1f;
-        float tier2Y = 2f;
-        float tier3Y = 5f;
-        float tier4Y = 8f;
+        // Ground top is around y = -2.5 (we build ground blocks at -3 and -4).
+        // Using these tiers gives ~2 block gaps between ground/platform tiers.
+        float tier1Y = 0f;
+        float tier2Y = 3f;
+        float tier3Y = 6f;
+        float tier4Y = 9f;
 
         // Tier 1 (-1)
         CreatePlatformStrip(root.transform, groundSprite, new Vector3(-55f, tier1Y, 0f), 30);
@@ -1177,10 +1219,10 @@ public static class GenerateCorePrefabs2D
         }
         // Enemies and resources should spawn ABOVE platform colliders,
         // so the ore trigger isn't embedded "in the floor".
-        float tier1Y = -1f;
-        float tier2Y = 2f;
-        float tier3Y = 5f;
-        float tier4Y = 8f;
+        float tier1Y = 0f;
+        float tier2Y = 3f;
+        float tier3Y = 6f;
+        float tier4Y = 9f;
 
         float enemySpawnYOffset = 1.1f;
         float resourceSpawnYOffset = 1.0f;

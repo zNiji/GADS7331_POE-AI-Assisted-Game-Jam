@@ -69,6 +69,11 @@ public class HUDController : MonoBehaviour
         {
             pausePanel.AddComponent<InventoryPauseMenuUI>();
         }
+
+        if (pausePanel.GetComponent<PauseMenuReturnToMainMenuUI>() == null)
+        {
+            pausePanel.AddComponent<PauseMenuReturnToMainMenuUI>();
+        }
     }
 
     private void OnDisable()

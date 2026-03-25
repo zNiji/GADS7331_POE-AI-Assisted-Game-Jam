@@ -188,6 +188,26 @@ public class GameManager : MonoBehaviour
         ResetRun();
     }
 
+    public void ShowUpgradeMenuAfterExtraction()
+    {
+        waitingForDeathUpgradeSelection = true;
+        SetPause(true);
+
+        if (deathUpgradeMenu == null)
+        {
+            ResolveReferences();
+        }
+
+        if (deathUpgradeMenu != null)
+        {
+            deathUpgradeMenu.Show(this, "Extraction Successful", "Choose one permanent upgrade before redeploying.");
+            return;
+        }
+
+        // Fallback: if menu is missing, just redeploy.
+        CompleteDeathUpgradeAndRespawn();
+    }
+
     public void ResetRun()
     {
         SetPause(false);
