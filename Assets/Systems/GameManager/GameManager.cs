@@ -30,12 +30,82 @@ public class GameManager : MonoBehaviour
         CacheRunResettables();
         EnsureCameraRendering();
 
+        // Reinitialize when gameplay scene is loaded (GameManager persists across scenes).
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += HandleSceneLoaded;
+
         if (playerTransform != null)
         {
             cachedPlayerSpawnPosition = playerSpawnPoint != null
                 ? playerSpawnPoint.position
                 : playerTransform.position;
         }
+    }
+
+    private void Start()
+    {
+        // Some objects (and/or camera components) may enable/disable after Awake across scene loads.
+        // Re-apply camera display settings after the first frame.
+        Invoke(nameof(EnsureCameraRendering), 0f);
+    }
+
+    private void OnDestroy()
+    {
+        try
+        {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= HandleSceneLoaded;
+        }
+        catch { }
+    }
+
+    private void HandleSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        // Only reinitialize on gameplay scenes.
+        if (string.IsNullOrWhiteSpace(scene.name) || !scene.name.Contains("Level"))
+        {
+            return;
+        }
+
+        // Refresh references to the newly loaded scene.
+        ResolveReferences();
+        RefreshPlayerSpawnPosition();
+        EnsurePlayerDeathSubscription();
+        EnsureCameraRendering();
+
+        // Ensure spawner repopulates enemies/resources so the scene isn't "half reset".
+        LevelSetupSpawner spawner = FindAnyObjectByType<LevelSetupSpawner>();
+        if (spawner != null)
+        {
+            spawner.SpawnAll();
+        }
+
+        CacheRunResettables();
+
+        // Start a fresh run state in the newly loaded scene.
+        // This avoids "ores only" / stale camera & references after returning to main menu.
+        ResetRun();
+    }
+
+    private void RefreshPlayerSpawnPosition()
+    {
+        if (playerSpawnPoint != null)
+        {
+            cachedPlayerSpawnPosition = playerSpawnPoint.position;
+            return;
+        }
+
+        GameObject spawnGo = GameObject.Find("PlayerSpawn");
+        if (spawnGo != null)
+        {
+            cachedPlayerSpawnPosition = spawnGo.transform.position;
+        }
+    }
+
+    private void EnsurePlayerDeathSubscription()
+    {
+        if (playerStats == null) return;
+
+        playerStats.OnDied -= HandlePlayerDied;
+        playerStats.OnDied += HandlePlayerDied;
     }
 
     private void EnsureCameraRendering()
@@ -53,7 +123,7 @@ public class GameManager : MonoBehaviour
             c.gameObject.SetActive(true);
             c.enabled = true;
 
-            try { c.targetDisplay = desiredDisplay; } catch { /* ignore */ }
+            c.targetDisplay = desiredDisplay;
 
             c.orthographic = true;
             c.clearFlags = CameraClearFlags.SolidColor;
@@ -68,13 +138,42 @@ public class GameManager : MonoBehaviour
             c.transform.rotation = Quaternion.identity;
         }
 
-        Camera camForFollow = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+        // Safety: make sure at least one camera is enabled for the desired display.
+        bool anyForDesiredDisplay = false;
+        for (int i = 0; i < all.Length; i++)
+        {
+            Camera c = all[i];
+            if (c == null) continue;
+            if (!c.enabled) continue;
+            if (!c.gameObject.activeInHierarchy) continue;
+            if (c.targetDisplay == desiredDisplay)
+            {
+                anyForDesiredDisplay = true;
+                break;
+            }
+        }
+
+        Camera camForFollow = Camera.main != null ? Camera.main : null;
+        if (camForFollow == null)
+        {
+            // Pick the first camera from the already-collected list (includes inactive)
+            // to avoid missing disabled cameras via FindAnyObjectByType().
+            for (int i = 0; i < all.Length; i++)
+            {
+                if (all[i] != null)
+                {
+                    camForFollow = all[i];
+                    break;
+                }
+            }
+        }
+
         if (camForFollow == null)
         {
             GameObject camGO = new GameObject("PlayerCam");
             try { camGO.tag = "MainCamera"; } catch { /* tag may not exist */ }
             camForFollow = camGO.AddComponent<Camera>();
-            try { camForFollow.targetDisplay = desiredDisplay; } catch { /* ignore */ }
+            camForFollow.targetDisplay = desiredDisplay;
 
             camForFollow.enabled = true;
             camForFollow.orthographic = true;
@@ -88,6 +187,12 @@ public class GameManager : MonoBehaviour
             p.z = -10f;
             camForFollow.transform.position = p;
             camForFollow.transform.rotation = Quaternion.identity;
+        }
+        else if (!anyForDesiredDisplay)
+        {
+            // We found a follow camera but none were targeting the desired display.
+            // Force the follow camera to the correct display.
+            try { camForFollow.targetDisplay = desiredDisplay; } catch { /* ignore */ }
         }
 
         CameraFollow2D follow = camForFollow.GetComponent<CameraFollow2D>();
@@ -108,9 +213,9 @@ public class GameManager : MonoBehaviour
 
     private static int GetDesiredDisplayIndex()
     {
-        // If GameView is on Display 1, cameras targeting Display 0 won't render.
-        // Prefer Display 1 when it is active; otherwise fall back to Display 0.
-        if (Display.displays != null && Display.displays.Length > 1 && Display.displays[1] != null && Display.displays[1].active)
+        // The "No cameras rendering" overlay in your screenshot is specifically for Display 1,
+        // so prefer Display 1 whenever a second display exists.
+        if (Display.displays != null && Display.displays.Length > 1 && Display.displays[1] != null)
         {
             return 1;
         }
@@ -221,14 +326,23 @@ public class GameManager : MonoBehaviour
             InventorySystem.Instance.ClearRunResources();
         }
 
-        if (runResettables == null || runResettables.Length == 0)
-        {
-            CacheRunResettables();
-        }
+        // Always refresh run resettable list.
+        // Otherwise we can keep stale references to destroyed objects
+        // (e.g. after pausing -> returning to main menu -> spawning a new level),
+        // which causes MissingReferenceException during ResetForNewRun().
+        CacheRunResettables();
 
         for (int i = 0; i < runResettables.Length; i++)
         {
             if (runResettables[i] == null)
+            {
+                continue;
+            }
+
+            // Interface refs can still be "missing" even when they won't compare to null.
+            // If the underlying UnityEngine.Object was destroyed, casting to UnityEngine.Object will compare == null.
+            UnityEngine.Object uo = runResettables[i] as UnityEngine.Object;
+            if (uo == null)
             {
                 continue;
             }

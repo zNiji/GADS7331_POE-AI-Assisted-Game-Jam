@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-public class PlayerStats : MonoBehaviour
+public class PlayerStats : MonoBehaviour, IDamageable
 {
     [Header("Suit Integrity")]
     [SerializeField] private float maxHealth = 100f;
@@ -74,6 +74,12 @@ public class PlayerStats : MonoBehaviour
             isDead = true;
             OnDied?.Invoke();
         }
+    }
+
+    // Allows bullets/enemies to damage the player via the shared IDamageable interface.
+    void IDamageable.TakeDamage(int amount)
+    {
+        TakeDamage((float)amount);
     }
 
     public void Heal(float amount)

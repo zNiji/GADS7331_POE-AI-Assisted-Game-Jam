@@ -221,11 +221,10 @@ MonoBehaviour:
   maxCrystalHealthMultiplier: 2.6
   minCrystalDropMultiplier: 1.2
   maxCrystalDropMultiplier: 2.8
-  healthPickupDifficultyMultiplier: 1
   bulletPrefab: {fileID: 5895486365926902176, guid: 534d57b249bce7f4b8d8637a094983c3, type: 3}
   shooterRange: 10
   shooterCooldown: 1.2
   shooterBulletSpeed: 12
-  shooterBulletDamage: 1
+  shooterBulletDamage: 10
   spawnedEnemiesRoot: {fileID: 5175996841251594034}
   spawnedResourcesRoot: {fileID: 5731133463108740233}

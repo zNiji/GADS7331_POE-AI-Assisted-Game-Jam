@@ -779,7 +779,8 @@ public static class GenerateCorePrefabs2D
 
         Text debugText = CreateText("InventoryDebugText", canvasGO.transform, new Vector2(-320f, -120f), 14, TextAnchor.UpperLeft, new Vector2(350f, 300f), true);
 
-        GameObject pausePanel = CreatePanel("PausePanel", canvasGO.transform, new Vector2(0f, 0f), new Vector2(500f, 260f), new Color(0f, 0f, 0f, 0.7f));
+        // Bigger pause panel = more space for inventory texts and fewer overlap/clipping issues.
+        GameObject pausePanel = CreatePanel("PausePanel", canvasGO.transform, new Vector2(0f, 0f), new Vector2(720f, 420f), new Color(0f, 0f, 0f, 0.7f));
         pausePanel.SetActive(false);
         CreateCenteredText("PauseLabel", pausePanel.transform, new Vector2(0f, 20f), 36).text = "PAUSED";
 
@@ -1352,64 +1353,93 @@ public static class GenerateCorePrefabs2D
         float enemySpawnYOffset = 1.1f;
         float resourceSpawnYOffset = 1.0f;
 
-        // Platforms are made of "strips". To ensure it never feels sparse, we spawn at least:
-        // - 1 enemy per platform strip
-        // - 1 resource node per platform strip (Iron everywhere, with deterministic Crystal rarity on some strips)
+        // Platforms are made of strips; we want it to be dense but NOT uniform.
+        // For each strip we always spawn at least 1 enemy + 1 ore, and sometimes spawn extra ones.
 
-        // Tier 1 strip centers (y = 0): [-95..-51], [-45..-6], [-5..29], [35..69], [75..99]
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_1", new Vector3(-73f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_2", new Vector3(-26f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_3", new Vector3(12f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_4", new Vector3(52f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T1_5", new Vector3(87f, tier1Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        float edgePadding = 2f; // keep spawns away from strip edges
 
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_1", new Vector3(-73f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_2", new Vector3(-26f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_3", new Vector3(12f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_4", new Vector3(52f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T1_5", new Vector3(87f, tier1Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        // Per-strip spawn count ranges (keeps density, adds variation)
+        int enemyMinPerStrip = 1;
+        int enemyMaxPerStrip = 3;
+        int oreMinPerStrip = 1;
+        int oreMaxPerStrip = 2;
 
-        // Tier 2 strip centers (y = 3): [-110..-76], [-60..-26], [-10..19], [35..59], [70..109]
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_1", new Vector3(-93f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_2", new Vector3(-43f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_3", new Vector3(5f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_4", new Vector3(47f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T2_5", new Vector3(90f, tier2Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+        int enemyIndex = 0;
+        int oreIndex = 0;
 
-        // Crystal rarity: tier2 strips 2 and 4 are Crystal, others Iron.
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T2_1", new Vector3(-93f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T2_2", new Vector3(-43f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T2_3", new Vector3(5f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T2_4", new Vector3(47f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T2_5", new Vector3(90f, tier2Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        void SpawnStripSpawns(
+            string tierTag,
+            float yEnemy,
+            float yOre,
+            float stripXMin,
+            float stripXMax,
+            bool crystalForThisStrip)
+        {
+            float clampedMin = stripXMin + edgePadding;
+            float clampedMax = stripXMax - edgePadding;
+            if (clampedMax < clampedMin)
+            {
+                clampedMin = stripXMin;
+                clampedMax = stripXMax;
+            }
 
-        // Tier 3 strip centers (y = 6): [-120..-81], [-65..-31], [-20..9], [25..54], [70..104]
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_1", new Vector3(-101f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_2", new Vector3(-48f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_3", new Vector3(-5f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_4", new Vector3(40f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T3_5", new Vector3(87f, tier3Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+            int enemyCount = Mathf.Clamp(Mathf.RoundToInt(UnityEngine.Random.Range(enemyMinPerStrip, enemyMaxPerStrip + 1)), enemyMinPerStrip, enemyMaxPerStrip);
+            int oreCount = Mathf.Clamp(Mathf.RoundToInt(UnityEngine.Random.Range(oreMinPerStrip, oreMaxPerStrip + 1)), oreMinPerStrip, oreMaxPerStrip);
 
-        // Crystal rarity: tier3 strips 2 and 5 are Crystal, others Iron.
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T3_1", new Vector3(-101f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T3_2", new Vector3(-48f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T3_3", new Vector3(-5f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T3_4", new Vector3(40f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T3_5", new Vector3(87f, tier3Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+            for (int e = 0; e < enemyCount; e++)
+            {
+                float x = UnityEngine.Random.Range(clampedMin, clampedMax);
+                CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_" + tierTag + "_" + (enemyIndex++).ToString(), new Vector3(x, yEnemy, 0f), SpawnPoint2D.SpawnType.Enemy);
+            }
 
-        // Tier 4 strip centers (y = 9): [-105..-61], [-50..-16], [0..34], [45..69], [80..104]
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_1", new Vector3(-83f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_2", new Vector3(-33f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_3", new Vector3(17f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_4", new Vector3(57f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
-        CreateSpawnPoint(spawnPointsRoot, "EnemySpawn_T4_5", new Vector3(92f, tier4Y + enemySpawnYOffset, 0f), SpawnPoint2D.SpawnType.Enemy);
+            for (int o = 0; o < oreCount; o++)
+            {
+                float x = UnityEngine.Random.Range(clampedMin, clampedMax);
+                string resourceName = crystalForThisStrip ? "ResourceSpawn_Crystal_" : "ResourceSpawn_Iron_";
+                CreateSpawnPoint(
+                    spawnPointsRoot,
+                    resourceName + tierTag + "_" + (oreIndex++).ToString(),
+                    new Vector3(x, yOre, 0f),
+                    SpawnPoint2D.SpawnType.Resource
+                );
+            }
+        }
 
-        // Crystal rarity: tier4 strips 1 and 3 are Crystal, others Iron.
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T4_1", new Vector3(-83f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T4_2", new Vector3(-33f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Crystal_T4_3", new Vector3(17f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T4_4", new Vector3(57f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
-        CreateSpawnPoint(spawnPointsRoot, "ResourceSpawn_Iron_T4_5", new Vector3(92f, tier4Y + resourceSpawnYOffset, 0f), SpawnPoint2D.SpawnType.Resource);
+        // Tier 1 strip x ranges: [-95..-51], [-45..-6], [-5..29], [35..69], [75..99]
+        float t1YEnemy = tier1Y + enemySpawnYOffset;
+        float t1YOre = tier1Y + resourceSpawnYOffset;
+        SpawnStripSpawns("T1_1", t1YEnemy, t1YOre, -95f, -51f, false);
+        SpawnStripSpawns("T1_2", t1YEnemy, t1YOre, -45f, -6f, false);
+        SpawnStripSpawns("T1_3", t1YEnemy, t1YOre, -5f, 29f, false);
+        SpawnStripSpawns("T1_4", t1YEnemy, t1YOre, 35f, 69f, false);
+        SpawnStripSpawns("T1_5", t1YEnemy, t1YOre, 75f, 99f, false);
+
+        // Tier 2 strip x ranges: [-110..-76], [-60..-26], [-10..19], [35..59], [70..109]
+        float t2YEnemy = tier2Y + enemySpawnYOffset;
+        float t2YOre = tier2Y + resourceSpawnYOffset;
+        SpawnStripSpawns("T2_1", t2YEnemy, t2YOre, -110f, -76f, false);
+        SpawnStripSpawns("T2_2", t2YEnemy, t2YOre, -60f, -26f, true);  // crystal
+        SpawnStripSpawns("T2_3", t2YEnemy, t2YOre, -10f, 19f, false);
+        SpawnStripSpawns("T2_4", t2YEnemy, t2YOre, 35f, 59f, true);   // crystal
+        SpawnStripSpawns("T2_5", t2YEnemy, t2YOre, 70f, 109f, false);
+
+        // Tier 3 strip x ranges: [-120..-81], [-65..-31], [-20..9], [25..54], [70..104]
+        float t3YEnemy = tier3Y + enemySpawnYOffset;
+        float t3YOre = tier3Y + resourceSpawnYOffset;
+        SpawnStripSpawns("T3_1", t3YEnemy, t3YOre, -120f, -81f, false);
+        SpawnStripSpawns("T3_2", t3YEnemy, t3YOre, -65f, -31f, true);  // crystal
+        SpawnStripSpawns("T3_3", t3YEnemy, t3YOre, -20f, 9f, false);
+        SpawnStripSpawns("T3_4", t3YEnemy, t3YOre, 25f, 54f, false);
+        SpawnStripSpawns("T3_5", t3YEnemy, t3YOre, 70f, 104f, true);  // crystal
+
+        // Tier 4 strip x ranges: [-105..-61], [-50..-16], [0..34], [45..69], [80..104]
+        float t4YEnemy = tier4Y + enemySpawnYOffset;
+        float t4YOre = tier4Y + resourceSpawnYOffset;
+        SpawnStripSpawns("T4_1", t4YEnemy, t4YOre, -105f, -61f, true);  // crystal
+        SpawnStripSpawns("T4_2", t4YEnemy, t4YOre, -50f, -16f, false);
+        SpawnStripSpawns("T4_3", t4YEnemy, t4YOre, 0f, 34f, true);    // crystal
+        SpawnStripSpawns("T4_4", t4YEnemy, t4YOre, 45f, 69f, false);
+        SpawnStripSpawns("T4_5", t4YEnemy, t4YOre, 80f, 104f, false);
     }
 
     private static void PositionPlayerAtSpawn()

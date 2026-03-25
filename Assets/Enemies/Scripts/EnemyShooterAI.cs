@@ -6,6 +6,7 @@ public class EnemyShooterAI : MonoBehaviour
     [Header("Bullet Spawning")]
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private Vector2 fireOffset = new Vector2(0.2f, 0f);
+    [SerializeField] private float spawnDistanceFromShooter = 0.6f;
 
     [Header("Shooting")]
     [SerializeField] private float shootRange = 10f;
@@ -20,7 +21,7 @@ public class EnemyShooterAI : MonoBehaviour
     {
         if (player == null)
         {
-            PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+            PlayerStats stats = UnityEngine.Object.FindAnyObjectByType<PlayerStats>();
             if (stats != null)
             {
                 player = stats.transform;
@@ -48,7 +49,7 @@ public class EnemyShooterAI : MonoBehaviour
 
         if (player == null)
         {
-            PlayerStats stats = FindAnyObjectByType<PlayerStats>();
+            PlayerStats stats = UnityEngine.Object.FindAnyObjectByType<PlayerStats>();
             if (stats != null) player = stats.transform;
         }
 
@@ -76,25 +77,34 @@ public class EnemyShooterAI : MonoBehaviour
     {
         Vector2 toPlayer = (player.position - transform.position);
         Vector2 direction = toPlayer.sqrMagnitude < 0.0001f ? Vector2.right : toPlayer.normalized;
-
-        Vector2 offset = fireOffset;
-        // Make the offset point in the direction the enemy is firing.
-        if (direction.x < 0f) offset.x = -Mathf.Abs(offset.x);
-        else offset.x = Mathf.Abs(offset.x);
-
-        Vector3 spawnPos = transform.position + new Vector3(offset.x, offset.y, 0f);
+        
+        // Spawn slightly forward so the bullet doesn't overlap the shooter's own collider.
+        // This prevents instant self-hits where the bullet gets destroyed on spawn.
+        Vector3 spawnPos = transform.position
+                           + (Vector3)(direction * spawnDistanceFromShooter)
+                           + (Vector3)fireOffset;
 
         GameObject bullet = Instantiate(bulletPrefab, spawnPos, Quaternion.identity);
         Bullet b = bullet != null ? bullet.GetComponent<Bullet>() : null;
         if (b != null)
         {
-            b.Initialize(direction, bulletSpeed, bulletDamage, gameObject);
+            // Use root object for the "ignore owner" check in Bullet.
+            b.Initialize(direction, bulletSpeed, bulletDamage, transform.root.gameObject);
+        }
+
+        // Extra safety: ignore collision between the bullet and this shooter's colliders.
+        Collider2D shooterCol = GetComponentInChildren<Collider2D>();
+        if (shooterCol != null && bullet != null)
+        {
+            Collider2D bulletCol = bullet.GetComponentInChildren<Collider2D>();
+            if (bulletCol != null)
+            {
+                Physics2D.IgnoreCollision(bulletCol, shooterCol, true);
+            }
         }
     }
 
-    private static T FindAnyObjectByType<T>() where T : Component
-    {
-        return Object.FindAnyObjectByType<T>();
-    }
+    // Intentionally no custom FindAnyObjectByType helper:
+    // avoids editor warnings about hiding inherited methods.
 }
 

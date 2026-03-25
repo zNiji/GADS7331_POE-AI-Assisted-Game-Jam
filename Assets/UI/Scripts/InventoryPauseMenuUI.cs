@@ -9,17 +9,35 @@ public class InventoryPauseMenuUI : MonoBehaviour
     [SerializeField] private Text titleText;
     [SerializeField] private Text runInventoryText;
     [SerializeField] private Text bankedInventoryText;
+    [Header("Layout")]
+    [SerializeField] private Vector2 pausePanelSize = new Vector2(720f, 420f);
 
     private void Awake()
     {
+        // Ensure the pause panel is large enough for the inventory text block.
+        // (This avoids needing to regenerate the HUD canvas during iteration.)
+        RectTransform rt = GetComponent<RectTransform>();
+        if (rt != null && pausePanelSize != default)
+        {
+            rt.sizeDelta = pausePanelSize;
+        }
         EnsureTexts();
     }
     
     private void OnEnable()
     {
+        EnsureTexts();
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.OnInventoryChanged += Refresh;
+        }
+
+        // The PausePanel already has a centered "PAUSED" label; hiding it avoids overlapping with the inventory texts.
+        Transform pauseLabel = transform.Find("PauseLabel");
+        if (pauseLabel != null)
+        {
+            pauseLabel.gameObject.SetActive(false);
         }
 
         Refresh();
@@ -31,34 +49,100 @@ public class InventoryPauseMenuUI : MonoBehaviour
         {
             InventorySystem.Instance.OnInventoryChanged -= Refresh;
         }
+
+        // Restore so if other pause UI expects it, it will be visible next time.
+        Transform pauseLabel = transform.Find("PauseLabel");
+        if (pauseLabel != null)
+        {
+            pauseLabel.gameObject.SetActive(true);
+        }
     }
 
     private void EnsureTexts()
     {
         if (titleText == null)
         {
-            titleText = FindOrCreateText("InventoryTitle", new Vector2(0f, 140f), 34);
+            titleText = FindOrCreateText("InventoryTitle", new Vector2(0f, 115f), 34);
             titleText.text = "INVENTORY";
+        }
+        else
+        {
+            // Re-apply layout every time (texts may have been created earlier with old positions).
+            ApplyTextLayout(titleText, "InventoryTitle", new Vector2(0f, 115f), 34, TextAnchor.MiddleCenter, new Vector2(520f, 60f));
         }
 
         if (runInventoryText == null)
         {
-            runInventoryText = FindOrCreateText("RunInventoryText", new Vector2(0f, 60f), 26, TextAnchor.UpperCenter, new Vector2(720f, 140f));
+            runInventoryText = FindOrCreateText(
+                "RunInventoryText",
+                new Vector2(0f, 70f),
+                26,
+                TextAnchor.MiddleCenter,
+                new Vector2(520f, 120f)
+            );
+        }
+        else
+        {
+            ApplyTextLayout(runInventoryText, "RunInventoryText", new Vector2(0f, 70f), 26, TextAnchor.MiddleCenter, new Vector2(520f, 120f));
         }
 
         if (bankedInventoryText == null)
         {
-            bankedInventoryText = FindOrCreateText("BankedInventoryText", new Vector2(0f, -10f), 22, TextAnchor.UpperCenter, new Vector2(720f, 130f));
+            bankedInventoryText = FindOrCreateText(
+                "BankedInventoryText",
+                new Vector2(0f, -25f),
+                22,
+                TextAnchor.MiddleCenter,
+                new Vector2(520f, 120f)
+            );
+        }
+        else
+        {
+            ApplyTextLayout(bankedInventoryText, "BankedInventoryText", new Vector2(0f, -25f), 22, TextAnchor.MiddleCenter, new Vector2(520f, 120f));
         }
     }
 
+    private void ApplyTextLayout(Text text, string expectedName, Vector2 localAnchoredPos, int fontSize, TextAnchor anchor, Vector2 sizeDelta)
+    {
+        if (text == null) return;
+
+        // Safety: if the existing name doesn't match, still proceed with layout.
+        RectTransform rt = text.GetComponent<RectTransform>();
+        if (rt == null) return;
+
+        // Use center anchoring to match the rest of the PausePanel (e.g. "PAUSED" is centered).
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = localAnchoredPos;
+
+        if (sizeDelta != default)
+        {
+            rt.sizeDelta = sizeDelta;
+        }
+
+        Font font = GetSafeFont();
+        if (font != null)
+        {
+            text.font = font;
+        }
+
+        text.fontSize = fontSize;
+        text.alignment = anchor;
+        text.color = Color.white;
+        text.horizontalOverflow = HorizontalWrapMode.Overflow;
+        text.verticalOverflow = VerticalWrapMode.Overflow;
+    }
+
     private Text FindOrCreateText(string name, Vector2 localAnchoredPos, int fontSize,
-        TextAnchor anchor = TextAnchor.UpperCenter, Vector2 sizeDelta = default)
+        TextAnchor anchor = TextAnchor.MiddleCenter, Vector2 sizeDelta = default)
     {
         Transform existing = transform.Find(name);
         Text text = existing != null ? existing.GetComponent<Text>() : null;
         if (text != null)
         {
+            // Re-apply layout in case it was created earlier.
+            ApplyTextLayout(text, name, localAnchoredPos, fontSize, anchor, sizeDelta == default ? new Vector2(520f, 60f) : sizeDelta);
             return text;
         }
 
@@ -66,9 +150,9 @@ public class InventoryPauseMenuUI : MonoBehaviour
         go.transform.SetParent(transform, false);
 
         RectTransform rt = go.GetComponent<RectTransform>();
-        rt.anchorMin = new Vector2(0.5f, 1f);
-        rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = localAnchoredPos;
         if (sizeDelta != default)
         {
@@ -76,7 +160,7 @@ public class InventoryPauseMenuUI : MonoBehaviour
         }
         else
         {
-            rt.sizeDelta = new Vector2(720f, 60f);
+            rt.sizeDelta = new Vector2(520f, 60f);
         }
 
         text = go.GetComponent<Text>();

@@ -39,15 +39,12 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private float minCrystalDropMultiplier = 1.2f;
     [SerializeField] private float maxCrystalDropMultiplier = 2.8f;
 
-    [Header("Health Pickup Placement")]
-    [SerializeField] private float healthPickupDifficultyMultiplier = 1f;
-
     [Header("Enemy Shooting")]
     [SerializeField] private GameObject bulletPrefab;
     [SerializeField] private float shooterRange = 10f;
     [SerializeField] private float shooterCooldown = 1.2f;
     [SerializeField] private float shooterBulletSpeed = 12f;
-    [SerializeField] private int shooterBulletDamage = 1;
+    [SerializeField] private int shooterBulletDamage = 10;
 
     [Header("Organization (optional)")]
     [SerializeField] private Transform spawnedEnemiesRoot;
@@ -149,7 +146,9 @@ public class LevelSetupSpawner : MonoBehaviour
                     }
 
                     float shotSpeed = shooterBulletSpeed * Mathf.Lerp(0.9f, 1.3f, difficultyT);
-                    int shotDamage = Mathf.Max(1, Mathf.RoundToInt(shooterBulletDamage * Mathf.Lerp(0.8f, 1.6f, difficultyT)));
+                    // Make bullets feel impactful as difficulty increases.
+                    // Extra multiplier so changes apply even if an older prefab/scene serialized value was used.
+                    int shotDamage = Mathf.Max(1, Mathf.RoundToInt(shooterBulletDamage * Mathf.Lerp(1.0f, 2.6f, difficultyT) * 2.0f));
                     shooter.Configure(bulletPrefab, shooterRange, shooterCooldown, shotSpeed, shotDamage);
                 }
             }
