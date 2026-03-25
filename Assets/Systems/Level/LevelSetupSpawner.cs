@@ -198,42 +198,6 @@ public class LevelSetupSpawner : MonoBehaviour
             float y = tierSpawnYs[Random.Range(0, tierSpawnYs.Length)];
             Vector3 guess = new Vector3(x, y, 0f);
 
-            // Skip if too close to an ore spawn point.
-            bool overlapsOre = false;
-            for (int j = 0; j < resourceSpawnPositions.Count; j++)
-            {
-                if (Vector3.Distance(guess, resourceSpawnPositions[j]) <= oxygenAvoidResourceRadius)
-                {
-                    overlapsOre = true;
-                    break;
-                }
-            }
-            if (overlapsOre) continue;
-
-            // Skip if too close to existing pickup.
-            bool overlapsExisting = false;
-            for (int j = 0; j < existingPickupPositions.Count; j++)
-            {
-                if (Vector3.Distance(guess, existingPickupPositions[j]) <= oxygenAvoidExistingPickupRadius)
-                {
-                    overlapsExisting = true;
-                    break;
-                }
-            }
-            if (overlapsExisting) continue;
-
-            // Skip if too close to a health pickup.
-            bool overlapsHealth = false;
-            for (int j = 0; j < existingHealthPickupPositions.Count; j++)
-            {
-                if (Vector3.Distance(guess, existingHealthPickupPositions[j]) <= oxygenAvoidHealthPickupRadius)
-                {
-                    overlapsHealth = true;
-                    break;
-                }
-            }
-            if (overlapsHealth) continue;
-
             // Snap onto ground using a raycast.
             Vector2 origin = new Vector2(guess.x, guess.y + oxygenRaycastHeightAbove);
             RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, oxygenRaycastDistance, mask);
@@ -241,8 +205,41 @@ public class LevelSetupSpawner : MonoBehaviour
 
             Vector3 finalPos = new Vector3(guess.x, hit.point.y + oxygenSurfaceYOffset, guess.z);
 
+            // Overlap checks must use the final snapped position (y changes after raycast).
+
+            // Skip if too close to an ore spawn point.
+            for (int j = 0; j < resourceSpawnPositions.Count; j++)
+            {
+                if (Vector3.Distance(finalPos, resourceSpawnPositions[j]) <= oxygenAvoidResourceRadius)
+                {
+                    goto NextOxygenAttempt;
+                }
+            }
+
+            // Skip if too close to existing oxygen pickups.
+            for (int j = 0; j < existingPickupPositions.Count; j++)
+            {
+                if (Vector3.Distance(finalPos, existingPickupPositions[j]) <= oxygenAvoidExistingPickupRadius)
+                {
+                    goto NextOxygenAttempt;
+                }
+            }
+
+            // Skip if too close to health pickups.
+            for (int j = 0; j < existingHealthPickupPositions.Count; j++)
+            {
+                if (Vector3.Distance(finalPos, existingHealthPickupPositions[j]) <= oxygenAvoidHealthPickupRadius)
+                {
+                    goto NextOxygenAttempt;
+                }
+            }
+
             GameObject instance = Instantiate(prefabToUse, finalPos, Quaternion.identity, oxygenRoot);
+            existingPickupPositions.Add(finalPos);
             spawnedCount++;
+
+            NextOxygenAttempt:
+            continue;
         }
 
         // Safety net: if our strict overlap checks filtered everything out, try again with a looser radius.
@@ -257,36 +254,41 @@ public class LevelSetupSpawner : MonoBehaviour
                 float y = tierSpawnYs[Random.Range(0, tierSpawnYs.Length)];
                 Vector3 guess = new Vector3(x, y, 0f);
 
-                bool overlapsOre = false;
-                for (int j = 0; j < resourceSpawnPositions.Count; j++)
-                {
-                    if (Vector3.Distance(guess, resourceSpawnPositions[j]) <= loosenedOreRadius)
-                    {
-                        overlapsOre = true;
-                        break;
-                    }
-                }
-                if (overlapsOre) continue;
-
-                // Skip if too close to a health pickup.
-                bool overlapsHealth = false;
-                for (int j = 0; j < existingHealthPickupPositions.Count; j++)
-                {
-                    if (Vector3.Distance(guess, existingHealthPickupPositions[j]) <= oxygenAvoidHealthPickupRadius)
-                    {
-                        overlapsHealth = true;
-                        break;
-                    }
-                }
-                if (overlapsHealth) continue;
-
                 Vector2 origin = new Vector2(guess.x, guess.y + oxygenRaycastHeightAbove);
                 RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, oxygenRaycastDistance, mask);
                 if (!hit.collider) continue;
 
                 Vector3 finalPos = new Vector3(guess.x, hit.point.y + oxygenSurfaceYOffset, guess.z);
+
+                // Use final snapped position for overlap checks.
+                for (int j = 0; j < resourceSpawnPositions.Count; j++)
+                {
+                    if (Vector3.Distance(finalPos, resourceSpawnPositions[j]) <= loosenedOreRadius)
+                    {
+                        goto NextOxygenAttempt2;
+                    }
+                }
+                for (int j = 0; j < existingHealthPickupPositions.Count; j++)
+                {
+                    if (Vector3.Distance(finalPos, existingHealthPickupPositions[j]) <= oxygenAvoidHealthPickupRadius)
+                    {
+                        goto NextOxygenAttempt2;
+                    }
+                }
+                for (int j = 0; j < existingPickupPositions.Count; j++)
+                {
+                    if (Vector3.Distance(finalPos, existingPickupPositions[j]) <= oxygenAvoidExistingPickupRadius)
+                    {
+                        goto NextOxygenAttempt2;
+                    }
+                }
+
                 Instantiate(prefabToUse, finalPos, Quaternion.identity, oxygenRoot);
+                existingPickupPositions.Add(finalPos);
                 spawnedCount++;
+
+                NextOxygenAttempt2:
+                continue;
             }
         }
     }
@@ -457,7 +459,7 @@ public class LevelSetupSpawner : MonoBehaviour
     private float GetDifficultyT(Vector3 spawnPointPos, Vector3 playerSpawnPos)
     {
         float distance = Vector3.Distance(spawnPointPos, playerSpawnPos);
-        return Mathf.InverseLerp(minDifficultyDistance, maxDifficultyDistance, distance);
+        return Mathf.Clamp01(Mathf.InverseLerp(minDifficultyDistance, maxDifficultyDistance, distance));
     }
 
     private Vector3 GetPlayerSpawnPosition()

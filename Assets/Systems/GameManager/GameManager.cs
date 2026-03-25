@@ -129,6 +129,8 @@ public class GameManager : MonoBehaviour
             c.targetDisplay = desiredDisplay;
 
             c.orthographic = true;
+            // Taller orthographic view so newly-expanded higher tiers are visible immediately.
+            c.orthographicSize = 10f;
             c.clearFlags = CameraClearFlags.SolidColor;
             c.backgroundColor = new Color(0.18f, 0.2f, 0.27f, 1f);
             c.cullingMask = ~0;
@@ -180,6 +182,7 @@ public class GameManager : MonoBehaviour
 
             camForFollow.enabled = true;
             camForFollow.orthographic = true;
+            camForFollow.orthographicSize = 10f;
             camForFollow.clearFlags = CameraClearFlags.SolidColor;
             camForFollow.backgroundColor = new Color(0.18f, 0.2f, 0.27f, 1f);
             camForFollow.cullingMask = ~0;
