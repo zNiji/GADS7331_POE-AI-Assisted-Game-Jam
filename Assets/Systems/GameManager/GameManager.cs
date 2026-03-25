@@ -59,8 +59,11 @@ public class GameManager : MonoBehaviour
 
     private void HandleSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
-        // Only reinitialize on gameplay scenes.
-        if (string.IsNullOrWhiteSpace(scene.name) || !scene.name.Contains("Level"))
+        // Be robust: scene name filtering can break if the gameplay scene is renamed.
+        // Instead, only proceed when we can see core gameplay objects.
+        PlayerStats psProbe = FindAnyObjectByType<PlayerStats>();
+        LevelSetupSpawner spawnerProbe = FindAnyObjectByType<LevelSetupSpawner>();
+        if (psProbe == null && spawnerProbe == null)
         {
             return;
         }
@@ -71,21 +74,44 @@ public class GameManager : MonoBehaviour
         EnsurePlayerDeathSubscription();
         EnsureCameraRendering();
 
-        // Ensure spawner repopulates enemies/resources so the scene isn't "half reset".
+        // Start a fresh run state first (clears run inventory / resets run-state objects).
+        ResetRun();
+
+        // Apply pending save + reseed the level on the next frame.
+        // This ensures UI elements have subscribed to events (InventoryDebugDisplay / pause inventory text)
+        // and the level spawner is fully ready to instantiate enemies/resources.
+        StartCoroutine(ApplySaveAndReseedLevelNextFrame());
+    }
+
+    private System.Collections.IEnumerator ApplySaveAndReseedLevelNextFrame()
+    {
+        yield return null; // wait one frame for UI/event subscriptions + scene objects to fully wake
+
+        // If the player chose a save slot from the main menu, restore the run state now.
+        GameSaveSystem.TryLoadPendingSlotIntoWorld();
+
+        // Find the spawner after the scene has fully woken up.
         LevelSetupSpawner spawner = FindAnyObjectByType<LevelSetupSpawner>();
         if (spawner != null)
         {
             spawner.SpawnAll();
         }
+        else
+        {
+            Debug.LogWarning("Save load reseed failed: LevelSetupSpawner not found after scene wake.");
+        }
 
+        // Re-cache and reset run-resettable objects created/activated by the spawner.
         CacheRunResettables();
+        for (int i = 0; i < runResettables.Length; i++)
+        {
+            if (runResettables[i] == null) continue;
 
-        // Start a fresh run state in the newly loaded scene.
-        // This avoids "ores only" / stale camera & references after returning to main menu.
-        ResetRun();
+            UnityEngine.Object uo = runResettables[i] as UnityEngine.Object;
+            if (uo == null) continue;
 
-        // If the player chose a save slot from the main menu, restore the run state now.
-        GameSaveSystem.TryLoadPendingSlotIntoWorld();
+            runResettables[i].ResetForNewRun();
+        }
     }
 
     private void RefreshPlayerSpawnPosition()

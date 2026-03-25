@@ -9,21 +9,59 @@ public class InventoryDebugDisplay : MonoBehaviour
     [SerializeField] private bool sortAlphabetically = true;
     [SerializeField] private bool showWhenEmpty = true;
 
+    private bool isSubscribedToInventory;
+
     private void OnEnable()
     {
-        if (InventorySystem.Instance != null)
+        isSubscribedToInventory = false;
+        TrySubscribeAndRefresh();
+        if (!isSubscribedToInventory)
+        {
+            StartCoroutine(SubscribeRetry());
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (isSubscribedToInventory && InventorySystem.Instance != null)
+        {
+            InventorySystem.Instance.OnInventoryChanged -= Refresh;
+        }
+        isSubscribedToInventory = false;
+    }
+
+    private void TrySubscribeAndRefresh()
+    {
+        if (InventorySystem.Instance == null)
+        {
+            Refresh(); // show "no InventorySystem" while waiting
+            return;
+        }
+
+        if (!isSubscribedToInventory)
         {
             InventorySystem.Instance.OnInventoryChanged += Refresh;
+            isSubscribedToInventory = true;
         }
 
         Refresh();
     }
 
-    private void OnDisable()
+    private System.Collections.IEnumerator SubscribeRetry()
     {
-        if (InventorySystem.Instance != null)
+        // InventorySystem can be created a frame or two after the debug UI enables.
+        // Keep retrying briefly so the debug display doesn't get stuck.
+        for (int i = 0; i < 6; i++)
         {
-            InventorySystem.Instance.OnInventoryChanged -= Refresh;
+            yield return null;
+            if (InventorySystem.Instance != null)
+            {
+                TrySubscribeAndRefresh();
+                if (isSubscribedToInventory)
+                {
+                    yield break;
+                }
+            }
         }
     }
 

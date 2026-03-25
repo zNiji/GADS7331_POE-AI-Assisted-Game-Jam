@@ -1712,11 +1712,11 @@ public static class GenerateCorePrefabs2D
         {
             // Extremely rare ore: should appear far less often than Crystal.
             float uraniumChance = 0f;
-            if (tierTag.StartsWith("T2")) uraniumChance = 0.015f;
-            else if (tierTag.StartsWith("T3")) uraniumChance = 0.04f;
-            else if (tierTag.StartsWith("T4")) uraniumChance = 0.07f;
-            else if (tierTag.StartsWith("T5")) uraniumChance = 0.12f;
-            else if (tierTag.StartsWith("T6")) uraniumChance = 0.18f;
+            if (tierTag.StartsWith("T2")) uraniumChance = 0.005f;
+            else if (tierTag.StartsWith("T3")) uraniumChance = 0.015f;
+            else if (tierTag.StartsWith("T4")) uraniumChance = 0.03f;
+            else if (tierTag.StartsWith("T5")) uraniumChance = 0.06f;
+            else if (tierTag.StartsWith("T6")) uraniumChance = 0.10f;
 
             bool uraniumPlacedThisStrip = false;
 
@@ -1787,7 +1787,7 @@ public static class GenerateCorePrefabs2D
         float t2YOre = tier2Y + resourceSpawnYOffset;
         SpawnSplitStripSpawns("T2", 1, t2YEnemy, t2YOre, -110f, 35, false);
         SpawnSplitStripSpawns("T2", 2, t2YEnemy, t2YOre, -60f, 35, true);   // crystal
-        SpawnSplitStripSpawns("T2", 3, t2YEnemy, t2YOre, -10f, 30, false);
+        SpawnSplitStripSpawns("T2", 3, t2YEnemy, t2YOre, -10f, 30, true);
         SpawnSplitStripSpawns("T2", 4, t2YEnemy, t2YOre, 35f, 25, true);    // crystal
         SpawnSplitStripSpawns("T2", 5, t2YEnemy, t2YOre, 70f, 40, false);
 
@@ -1797,14 +1797,14 @@ public static class GenerateCorePrefabs2D
         SpawnSplitStripSpawns("T3", 1, t3YEnemy, t3YOre, -120f, 40, false);
         SpawnSplitStripSpawns("T3", 2, t3YEnemy, t3YOre, -65f, 35, true);   // crystal
         SpawnSplitStripSpawns("T3", 3, t3YEnemy, t3YOre, -20f, 30, false);
-        SpawnSplitStripSpawns("T3", 4, t3YEnemy, t3YOre, 25f, 30, false);
+        SpawnSplitStripSpawns("T3", 4, t3YEnemy, t3YOre, 25f, 30, true);
         SpawnSplitStripSpawns("T3", 5, t3YEnemy, t3YOre, 70f, 35, true);    // crystal
 
         // Tier 4 (9)
         float t4YEnemy = tier4Y + enemySpawnYOffset;
         float t4YOre = tier4Y + resourceSpawnYOffset;
         SpawnSplitStripSpawns("T4", 1, t4YEnemy, t4YOre, -105f, 45, true);  // crystal
-        SpawnSplitStripSpawns("T4", 2, t4YEnemy, t4YOre, -50f, 35, false);
+        SpawnSplitStripSpawns("T4", 2, t4YEnemy, t4YOre, -50f, 35, true);
         SpawnSplitStripSpawns("T4", 3, t4YEnemy, t4YOre, 0f, 35, true);     // crystal
         SpawnSplitStripSpawns("T4", 4, t4YEnemy, t4YOre, 45f, 25, false);
         SpawnSplitStripSpawns("T4", 5, t4YEnemy, t4YOre, 80f, 25, false);
@@ -1814,7 +1814,7 @@ public static class GenerateCorePrefabs2D
         float t5YOre = tier5Y + resourceSpawnYOffset;
         SpawnSplitStripSpawns("T5", 1, t5YEnemy, t5YOre, -120f, 40, false);
         SpawnSplitStripSpawns("T5", 2, t5YEnemy, t5YOre, -70f, 35, true);   // crystal
-        SpawnSplitStripSpawns("T5", 3, t5YEnemy, t5YOre, -20f, 35, false);
+        SpawnSplitStripSpawns("T5", 3, t5YEnemy, t5YOre, -20f, 35, true);
         SpawnSplitStripSpawns("T5", 4, t5YEnemy, t5YOre, 30f, 35, true);    // crystal
 
         // Tier 6 (15)
@@ -1822,7 +1822,7 @@ public static class GenerateCorePrefabs2D
         float t6YOre = tier6Y + resourceSpawnYOffset;
         SpawnSplitStripSpawns("T6", 1, t6YEnemy, t6YOre, -110f, 35, false);
         SpawnSplitStripSpawns("T6", 2, t6YEnemy, t6YOre, -55f, 30, true);   // crystal
-        SpawnSplitStripSpawns("T6", 3, t6YEnemy, t6YOre, 0f, 30, false);
+        SpawnSplitStripSpawns("T6", 3, t6YEnemy, t6YOre, 0f, 30, true);
         SpawnSplitStripSpawns("T6", 4, t6YEnemy, t6YOre, 50f, 30, true);    // crystal
     }
 

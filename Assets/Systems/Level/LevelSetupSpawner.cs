@@ -417,10 +417,11 @@ public class LevelSetupSpawner : MonoBehaviour
 
                 // Strength increases with distance from the initial player spawn.
                 // Use a non-linear curve + high-tier boost so far-away enemies feel less squishy.
-                float healthCurveT = Mathf.Pow(difficultyT, 1.6f);
+                // Stronger high-tier enemies: push the curve harder towards far-away spawns.
+                float healthCurveT = Mathf.Pow(difficultyT, 1.85f);
                 float healthMult = Mathf.Lerp(minEnemyHealthMultiplier, maxEnemyHealthMultiplier, healthCurveT);
                 // Extra boost ramps harder near max difficulty.
-                healthMult *= Mathf.Lerp(1f, 2.4f, difficultyT);
+                healthMult *= Mathf.Lerp(1f, 3.2f, difficultyT);
                 float speedMult = Mathf.Lerp(minEnemySpeedMultiplier, maxEnemySpeedMultiplier, difficultyT);
                 float damageMult = Mathf.Lerp(minEnemyDamageMultiplier, maxEnemyDamageMultiplier, difficultyT);
 
@@ -437,6 +438,7 @@ public class LevelSetupSpawner : MonoBehaviour
                 }
 
                 // Some enemies shoot back; chance scales with distance too.
+                // More frequent shooting enemies, especially at higher tiers.
                 float shooterChance = Mathf.Lerp(minShooterChance, maxShooterChance, difficultyT);
                 if (bulletPrefab != null && spawned != null && Random.value <= shooterChance)
                 {
