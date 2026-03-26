@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -81,6 +82,37 @@ public class HUDController : MonoBehaviour
 
         EnsureInventoryPauseMenu();
         ApplyReadableTextStyle();
+    }
+
+    private void Start()
+    {
+        // If HUD enables before BaseUpgradeSystem exists, we might miss the OnUpgradesChanged subscription.
+        // This deferred subscribe prevents stale upgrades UI.
+        if (upgradeSystem == null)
+        {
+            StartCoroutine(DeferredUpgradeSystemSubscribe());
+        }
+    }
+
+    private IEnumerator DeferredUpgradeSystemSubscribe()
+    {
+        int attempts = 0;
+        while (attempts < 60) // ~1 second at 60fps
+        {
+            attempts++;
+            if (upgradeSystem == null)
+            {
+                upgradeSystem = FindAnyObjectByType<BaseUpgradeSystem>();
+                if (upgradeSystem != null)
+                {
+                    upgradeSystem.OnUpgradesChanged += RefreshUpgradeLevels;
+                    RefreshUpgradeLevels();
+                    yield break;
+                }
+            }
+
+            yield return null;
+        }
     }
 
     private void ApplyReadableTextStyle()

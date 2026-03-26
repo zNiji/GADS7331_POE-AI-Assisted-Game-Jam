@@ -3869,15 +3869,13 @@ public static class GenerateCorePrefabs2D
                 }
                 else
                 {
-                    // Bias towards Iron overall; crystals are less common than before.
-                    if (crystalForThisStrip && UnityEngine.Random.value < 0.55f)
-                    {
-                        resourceName = "ResourceSpawn_Crystal_";
-                    }
-                    else
-                    {
-                        resourceName = "ResourceSpawn_Iron_";
-                    }
+                    // Bias towards Iron overall, but make crystals slightly more common.
+                    // - On "crystal strips": crystals are dominant but not guaranteed.
+                    // - On other strips: still mostly Iron, with a small chance of Crystal.
+                    float crystalChance = crystalForThisStrip ? 0.65f : 0.12f;
+                    resourceName = UnityEngine.Random.value < crystalChance
+                        ? "ResourceSpawn_Crystal_"
+                        : "ResourceSpawn_Iron_";
                 }
                 CreateSpawnPoint(
                     spawnPointsRoot,
