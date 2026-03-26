@@ -209,14 +209,14 @@ MonoBehaviour:
   clearSpawnedOnRespawn: 1
   minDifficultyDistance: 0
   maxDifficultyDistance: 90
-  minEnemyHealthMultiplier: 1
-  maxEnemyHealthMultiplier: 2.6
-  minEnemySpeedMultiplier: 1
-  maxEnemySpeedMultiplier: 1.6
-  minEnemyDamageMultiplier: 1
-  maxEnemyDamageMultiplier: 2
-  minShooterChance: 0.05
-  maxShooterChance: 0.35
+  minEnemyHealthMultiplier: 1.5
+  maxEnemyHealthMultiplier: 4.2
+  minEnemySpeedMultiplier: 1.05
+  maxEnemySpeedMultiplier: 1.85
+  minEnemyDamageMultiplier: 1.25
+  maxEnemyDamageMultiplier: 2.8
+  minShooterChance: 0.08
+  maxShooterChance: 0.45
   minIronHealthMultiplier: 1
   maxIronHealthMultiplier: 1.35
   minIronDropMultiplier: 1

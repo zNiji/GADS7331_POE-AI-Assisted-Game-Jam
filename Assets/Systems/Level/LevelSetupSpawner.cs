@@ -24,15 +24,15 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private float minDifficultyDistance = 0f;
     [SerializeField] private float maxDifficultyDistance = 90f;
 
-    [SerializeField] private float minEnemyHealthMultiplier = 1f;
-    [SerializeField] private float maxEnemyHealthMultiplier = 2.6f;
-    [SerializeField] private float minEnemySpeedMultiplier = 1f;
-    [SerializeField] private float maxEnemySpeedMultiplier = 1.6f;
-    [SerializeField] private float minEnemyDamageMultiplier = 1f;
-    [SerializeField] private float maxEnemyDamageMultiplier = 2f;
+    [SerializeField] private float minEnemyHealthMultiplier = 1.5f;
+    [SerializeField] private float maxEnemyHealthMultiplier = 4.2f;
+    [SerializeField] private float minEnemySpeedMultiplier = 1.05f;
+    [SerializeField] private float maxEnemySpeedMultiplier = 1.85f;
+    [SerializeField] private float minEnemyDamageMultiplier = 1.25f;
+    [SerializeField] private float maxEnemyDamageMultiplier = 2.8f;
 
-    [SerializeField] private float minShooterChance = 0.05f;
-    [SerializeField] private float maxShooterChance = 0.35f;
+    [SerializeField] private float minShooterChance = 0.08f;
+    [SerializeField] private float maxShooterChance = 0.45f;
 
     [Header("Rare Material Scaling")]
     [SerializeField] private float minIronHealthMultiplier = 1f;
@@ -455,12 +455,18 @@ public class LevelSetupSpawner : MonoBehaviour
                 // Strength increases with distance from the initial player spawn.
                 // Use a non-linear curve + high-tier boost so far-away enemies feel less squishy.
                 // Stronger high-tier enemies: push the curve harder towards far-away spawns.
-                float healthCurveT = Mathf.Pow(difficultyT, 1.85f);
+                // Health grows faster at higher tiers so enemies don't get deleted
+                // after only a small number of damage upgrades.
+                // Health scaling: aggressively ramp with tier distance.
+                // Goal: high-tier enemies survive ~20+ player shots at low upgrade tiers.
+                float healthCurveT = Mathf.Pow(difficultyT, 1.2f);
                 float healthMult = Mathf.Lerp(minEnemyHealthMultiplier, maxEnemyHealthMultiplier, healthCurveT);
-                // Extra boost ramps harder near max difficulty.
-                healthMult *= Mathf.Lerp(1f, 3.2f, difficultyT);
+                // Extra boost (peaks high): makes far enemies dramatically tougher.
+                healthMult *= Mathf.Lerp(1f, 9f, Mathf.Pow(difficultyT, 0.7f));
                 float speedMult = Mathf.Lerp(minEnemySpeedMultiplier, maxEnemySpeedMultiplier, difficultyT);
-                float damageMult = Mathf.Lerp(minEnemyDamageMultiplier, maxEnemyDamageMultiplier, difficultyT);
+                float damageMult = Mathf.Lerp(minEnemyDamageMultiplier, maxEnemyDamageMultiplier, Mathf.Pow(difficultyT, 0.9f));
+                // Extra damage ramp (stronger at high tiers).
+                damageMult *= Mathf.Lerp(1f, 2.0f, Mathf.Pow(difficultyT, 1.15f));
 
                 EnemyHealth enemyHealth = spawned != null ? spawned.GetComponent<EnemyHealth>() : null;
                 if (enemyHealth != null)
@@ -489,11 +495,13 @@ public class LevelSetupSpawner : MonoBehaviour
                         shooter = spawned.AddComponent<EnemyShooterAI>();
                     }
 
-                    float shotSpeed = shooterBulletSpeed * Mathf.Lerp(0.9f, 1.3f, difficultyT);
+                    float shotSpeed = shooterBulletSpeed * Mathf.Lerp(0.95f, 1.4f, difficultyT);
                     // Make bullets feel impactful as difficulty increases.
                     // Extra multiplier so changes apply even if an older prefab/scene serialized value was used.
-                    int shotDamage = Mathf.Max(1, Mathf.RoundToInt(shooterBulletDamage * Mathf.Lerp(1.0f, 2.6f, difficultyT) * 2.0f));
-                    shooter.Configure(bulletPrefab, shooterRange, shooterCooldown, shotSpeed, shotDamage);
+                    int shotDamage = Mathf.Max(1, Mathf.RoundToInt(shooterBulletDamage * Mathf.Lerp(1.0f, 2.9f, difficultyT) * 1.9f));
+                    // Shoot more frequently at higher tiers.
+                    float tierCooldown = shooterCooldown * Mathf.Lerp(1f, 0.65f, difficultyT);
+                    shooter.Configure(bulletPrefab, shooterRange, tierCooldown, shotSpeed, shotDamage);
                 }
 
                 // Visuals: normal enemies are dangerous flora/fauna, shooters are alien race.
@@ -519,7 +527,9 @@ public class LevelSetupSpawner : MonoBehaviour
     private float GetDifficultyT(Vector3 spawnPointPos, Vector3 playerSpawnPos)
     {
         float distance = Vector3.Distance(spawnPointPos, playerSpawnPos);
-        return Mathf.Clamp01(Mathf.InverseLerp(minDifficultyDistance, maxDifficultyDistance, distance));
+        float t = Mathf.Clamp01(Mathf.InverseLerp(minDifficultyDistance, maxDifficultyDistance, distance));
+        // Warp the curve so mid tiers are meaningfully harder (fewer "easy" mid spawns).
+        return Mathf.Pow(t, 0.75f);
     }
 
     private Vector3 GetPlayerSpawnPosition()
