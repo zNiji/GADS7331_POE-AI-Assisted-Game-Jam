@@ -51,12 +51,16 @@ Tracks scope shifts, design decisions, and implementation changes over time.
   - Major tuning decisions
   - UX/UI changes
 
+---
+
+## 2026-03-25
+
 ### Requirements & Implementation Buildout (Merged From `requirements-changes.md`)
 - Added core tooling stack in `requirements.txt`:
   - Engine: Unity (2022 or later)
   - Language: C#
   - Tools: Cursor AI Editor, ChatGPT
----
+
 ### Core Gameplay Requirement Updates
 - Added modular 2D player controller with Rigidbody2D movement, jump, and directional flip.
 - Added ranged shooting system with prefab bullets and enemy collision damage.
@@ -175,3 +179,37 @@ Tracks scope shifts, design decisions, and implementation changes over time.
   - Prevented double-spawn by ensuring only one system triggers initial `SpawnAll`.
   - Deferred heavy scene-wide scans by a frame in `GameManager`.
   - Added a lightweight “Loading…” overlay shown during reseed/spawn and hidden afterward.
+
+---
+
+## 2026-03-26 (Later Updates)
+
+### Level Generation: Platform Layout Improvements
+- Expanded and then reworked the platform-strip generator so tiers feel less uniform:
+  - Added side coverage so there isn’t “dead air” at the far left/right edges of the level.
+  - Rebalanced strip placement so platforms are **shorter overall** and tier endpoints no longer line up cleanly.
+- Fixed floating resource nodes caused by strip-shortening:
+  - Removed the “shorten strip” behavior in `CreateSplitStrip()` to guarantee each strip’s full intended footprint exists beneath its spawn ranges.
+
+### Spawn Points: Prevent Bottom-Layer Enemy/Falling Spawns
+- Updated spawn-point snapping to avoid snapping tier spawns all the way down to the bottom-most ground.
+- Added explicit handling for spawn points tagged with `_bottom_`:
+  - Resource spawns on bottom layer always create Iron and are not affected by ground-floor ore caps.
+  - Enemy spawns are blocked for any `_bottom_` tagged points.
+
+### Scene Consistency: “Reverts to Old Level” on Play
+- Fixed a workflow issue where the generated test level was visible in Scene view but Play Mode loaded the previous saved `Level_01`:
+  - `Create Playable Test Level` now saves the active scene after generation so runtime matches editor generation.
+
+### Respawn Robustness
+- Hardened respawn behavior so it always uses the current scene’s `PlayerSpawn` rather than stale persisted references across scene loads/runs.
+
+### Main Menu: Save Slots Management (Rename/Delete)
+- Added per-slot save name support and save-slot management actions:
+  - Save metadata now includes a persistent `saveName`.
+  - Load Game panel now supports **Rename** and **Delete** for existing saves.
+  - Rename uses an input overlay and persists to the save JSON.
+  - Delete removes the slot’s JSON file.
+- UI polish:
+  - Load Game panel background is now fully opaque.
+  - Replaced text action buttons with small square icon buttons (pen = rename, trash = delete) placed within the panel bounds.

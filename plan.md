@@ -17,7 +17,7 @@
 - Run reset system
 - Resource loss on death
 
-### Milestone 4: Base System
+### Milestone 4: Upgrade System
 - Upgrade menu UI
 - Upgrade effects (health, damage, mining speed)
 - Persistent progression
