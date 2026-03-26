@@ -9,6 +9,7 @@ public class ResourceItem : MonoBehaviour
     [SerializeField] private Sprite ironItemSprite;
     [SerializeField] private Sprite crystalItemSprite;
     [SerializeField] private Sprite uraniumItemSprite;
+    [SerializeField] private Sprite zenithItemSprite;
     [SerializeField] private int amount = 1;
     [SerializeField] private bool requirePlayerTag = true;
     [SerializeField] private AudioClip pickupSfx;
@@ -39,6 +40,11 @@ public class ResourceItem : MonoBehaviour
         if (string.IsNullOrWhiteSpace(resourceId)) return;
 
         string lower = resourceId.ToLowerInvariant();
+        if (lower.Contains("zenith"))
+        {
+            if (zenithItemSprite != null) spriteRenderer.sprite = zenithItemSprite;
+            return;
+        }
         if (lower.Contains("uranium"))
         {
             if (uraniumItemSprite != null) spriteRenderer.sprite = uraniumItemSprite;

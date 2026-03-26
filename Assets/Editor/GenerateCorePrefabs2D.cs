@@ -33,7 +33,7 @@ public static class GenerateCorePrefabs2D
         Sprite faunaEnemySprite = CreateFaunaEnemySprite("spr_alien_fauna_enemy", seed: 31);
         Sprite shooterAlienSprite = CreateAlienShooterEnemySprite("spr_alien_shooter_enemy", seed: 41);
         // Alien tile sprites (pixel-art, procedural, deterministic).
-        // Different ore types so Iron/Crystal/Uranium look distinct.
+        // Different ore types so Iron/Crystal/Uranium/Zenithite look distinct.
         Sprite ironNodeSprite = CreateAlienTileSprite(
             "spr_alien_ore_iron_node",
             baseFill: new Color(0.18f, 0.75f, 0.95f),
@@ -57,6 +57,14 @@ public static class GenerateCorePrefabs2D
             accentColor: new Color(0.55f, 1f, 0.7f),
             accentChance01: 0.11f,
             seed: 303
+        );
+        Sprite zenithNodeSprite = CreateAlienTileSprite(
+            "spr_alien_ore_zenith_node",
+            baseFill: new Color(1f, 0.85f, 0.25f),
+            borderColor: new Color(0.45f, 0.25f, 0.05f),
+            accentColor: new Color(0.95f, 0.35f, 1f),
+            accentChance01: 0.06f,
+            seed: 313
         );
 
         Sprite ironItemSprite = CreateAlienTileSprite(
@@ -83,6 +91,14 @@ public static class GenerateCorePrefabs2D
             accentChance01: 0.08f,
             seed: 606
         );
+        Sprite zenithItemSprite = CreateAlienTileSprite(
+            "spr_alien_ore_zenith_item",
+            baseFill: new Color(1f, 0.92f, 0.45f),
+            borderColor: new Color(0.45f, 0.25f, 0.05f),
+            accentColor: new Color(0.65f, 0.95f, 1f),
+            accentChance01: 0.06f,
+            seed: 616
+        );
         Sprite healthPickupSprite = CreateAlienHealthPickupSprite(
             "spr_alien_health_pickup",
             // Match flora enemy body color (neon green).
@@ -107,9 +123,9 @@ public static class GenerateCorePrefabs2D
             seed: 707
         );
 
-        GameObject resourceItemPrefab = CreateResourceItemPrefab(ironItemSprite, crystalItemSprite, uraniumItemSprite);
+        GameObject resourceItemPrefab = CreateResourceItemPrefab(ironItemSprite, crystalItemSprite, uraniumItemSprite, zenithItemSprite);
         GameObject bulletPrefab = CreateBulletPrefab(bulletSprite);
-        GameObject resourceNodePrefab = CreateResourceNodePrefab(ironNodeSprite, resourceItemPrefab, crystalNodeSprite, uraniumNodeSprite);
+        GameObject resourceNodePrefab = CreateResourceNodePrefab(ironNodeSprite, resourceItemPrefab, crystalNodeSprite, uraniumNodeSprite, zenithNodeSprite);
         GameObject healthPickupPrefab = CreateHealthPickupPrefab(healthPickupSprite);
         GameObject oxygenPickupPrefab = CreateOxygenPickupPrefab(oxygenPickupSprite);
         GameObject ammoPickupPrefab = CreateBulletAmmoPickupPrefab(ammoPickupSprite);
@@ -954,7 +970,7 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateResourceItemPrefab(Sprite ironSprite, Sprite crystalSprite, Sprite uraniumSprite)
+    private static GameObject CreateResourceItemPrefab(Sprite ironSprite, Sprite crystalSprite, Sprite uraniumSprite, Sprite zenithSprite)
     {
         GameObject go = new GameObject("ResourceItem");
         var renderer = go.AddComponent<SpriteRenderer>();
@@ -974,6 +990,7 @@ public static class GenerateCorePrefabs2D
             itemSO.FindProperty("ironItemSprite").objectReferenceValue = ironSprite;
             itemSO.FindProperty("crystalItemSprite").objectReferenceValue = crystalSprite;
             itemSO.FindProperty("uraniumItemSprite").objectReferenceValue = uraniumSprite;
+            itemSO.FindProperty("zenithItemSprite").objectReferenceValue = zenithSprite;
             itemSO.ApplyModifiedPropertiesWithoutUndo();
         }
 
@@ -983,7 +1000,7 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateResourceNodePrefab(Sprite ironNodeSprite, GameObject resourceItemPrefab, Sprite crystalNodeSprite, Sprite uraniumNodeSprite)
+    private static GameObject CreateResourceNodePrefab(Sprite ironNodeSprite, GameObject resourceItemPrefab, Sprite crystalNodeSprite, Sprite uraniumNodeSprite, Sprite zenithNodeSprite)
     {
         GameObject go = new GameObject("ResourceNode");
         var renderer = go.AddComponent<SpriteRenderer>();
@@ -1004,6 +1021,7 @@ public static class GenerateCorePrefabs2D
         nodeSO.FindProperty("ironNodeSprite").objectReferenceValue = ironNodeSprite;
         nodeSO.FindProperty("crystalNodeSprite").objectReferenceValue = crystalNodeSprite;
         nodeSO.FindProperty("uraniumNodeSprite").objectReferenceValue = uraniumNodeSprite;
+        nodeSO.FindProperty("zenithNodeSprite").objectReferenceValue = zenithNodeSprite;
         nodeSO.ApplyModifiedPropertiesWithoutUndo();
 
         string path = PrefabDir + "/ResourceNode.prefab";

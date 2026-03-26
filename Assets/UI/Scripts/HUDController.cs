@@ -71,7 +71,7 @@ public class HUDController : MonoBehaviour
         }
 
         // Keep HUD resource list aligned with actual mineable resources.
-        trackedResourceIds = new[] { "Iron", "Crystal", "Uranium" };
+        trackedResourceIds = new[] { "Iron", "Crystal", "Uranium", "Zenithite" };
 
         RefreshResources();
         ShowPrompt(string.Empty);

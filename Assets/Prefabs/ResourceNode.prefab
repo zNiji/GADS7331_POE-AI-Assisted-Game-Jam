@@ -141,6 +141,7 @@ MonoBehaviour:
   ironNodeSprite: {fileID: 21300000, guid: d171ccf407c8fb74b9217ed67090f5f2, type: 3}
   crystalNodeSprite: {fileID: 21300000, guid: 92bea099bd186bf4e952dda2d100fb22, type: 3}
   uraniumNodeSprite: {fileID: 21300000, guid: caf8c4fa2e93a814fb740f8c76381d56, type: 3}
+  zenithNodeSprite: {fileID: 21300000, guid: 5bc2a19a82824fb4a8a98009aa9df898, type: 3}
   maxHealth: 3
   dropAmount: 1
   resourceDropPrefab: {fileID: 8039583526655930826, guid: 7f652dae429dd7d40b7c1293d671cec2, type: 3}

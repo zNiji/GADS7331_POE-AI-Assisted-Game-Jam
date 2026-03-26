@@ -97,7 +97,7 @@ public class BaseUpgradeMenuUI : MonoBehaviour
             int level = upgradeSystem.GetCurrentLevel(definition);
             bool isMaxLevel = upgradeSystem.IsMaxLevel(definition);
             bool canAfford = upgradeSystem.CanAfford(definition);
-            string costsText = BuildCostText(definition);
+            string costsText = BuildCostText(definition, level);
 
             rows[i].Bind(
                 definition,
@@ -130,11 +130,13 @@ public class BaseUpgradeMenuUI : MonoBehaviour
         }
     }
 
-    private static string BuildCostText(UpgradeDefinition definition)
+    private string BuildCostText(UpgradeDefinition definition, int currentLevel)
     {
         if (definition == null || definition.resourceCosts == null || definition.resourceCosts.Count == 0)
         {
-            return "Cost: Free";
+            return (upgradeSystem != null && upgradeSystem.RequiresFinalTierOreForNextLevel(definition))
+                ? "Cost: Zenithite x1"
+                : "Cost: Free";
         }
 
         StringBuilder builder = new StringBuilder();
@@ -156,6 +158,15 @@ public class BaseUpgradeMenuUI : MonoBehaviour
             builder.Append(cost.resourceId);
             builder.Append(" x");
             builder.Append(cost.amount);
+        }
+
+        if (upgradeSystem != null && upgradeSystem.RequiresFinalTierOreForNextLevel(definition))
+        {
+            if (builder.Length > 6)
+            {
+                builder.Append(", ");
+            }
+            builder.Append("Zenithite x1");
         }
 
         return builder.ToString();

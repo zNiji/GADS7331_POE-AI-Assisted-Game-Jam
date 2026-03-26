@@ -180,7 +180,7 @@ public class DeathUpgradeMenuUI : MonoBehaviour
         if (label != null)
         {
             int currentLevel = upgradeSystem != null ? upgradeSystem.GetCurrentLevel(def) : 0;
-            label.text = def.displayName + "\n(Lv " + currentLevel + " -> " + (currentLevel + 1) + ")\n" + BuildCostText(def);
+            label.text = def.displayName + "\n(Lv " + currentLevel + " -> " + (currentLevel + 1) + ")\n" + BuildCostText(def, currentLevel);
         }
     }
 
@@ -225,11 +225,13 @@ public class DeathUpgradeMenuUI : MonoBehaviour
         }
     }
 
-    private static string BuildCostText(UpgradeDefinition definition)
+    private string BuildCostText(UpgradeDefinition definition, int currentLevel)
     {
         if (definition == null || definition.resourceCosts == null || definition.resourceCosts.Count == 0)
         {
-            return "Cost: Free";
+            return (upgradeSystem != null && upgradeSystem.RequiresFinalTierOreForNextLevel(definition))
+                ? "Cost: Zenithite x1"
+                : "Cost: Free";
         }
 
         string output = "Cost: ";
@@ -248,6 +250,16 @@ public class DeathUpgradeMenuUI : MonoBehaviour
             }
 
             output += cost.resourceId + " x" + cost.amount;
+            wroteAny = true;
+        }
+
+        if (upgradeSystem != null && upgradeSystem.RequiresFinalTierOreForNextLevel(definition))
+        {
+            if (wroteAny)
+            {
+                output += ", ";
+            }
+            output += "Zenithite x1";
             wroteAny = true;
         }
 

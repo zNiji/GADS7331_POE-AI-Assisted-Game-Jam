@@ -6,6 +6,9 @@ public class BaseUpgradeSystem : MonoBehaviour
 {
     public static BaseUpgradeSystem Instance { get; private set; }
 
+    private const string FinalTierOreId = "Zenithite";
+    private const int FinalTierOreCost = 1;
+
     [SerializeField] private List<UpgradeDefinition> availableUpgrades = new List<UpgradeDefinition>();
     [SerializeField] private PlayerStats playerStats;
     [SerializeField] private PlayerUpgradeEffects playerUpgradeEffects;
@@ -268,6 +271,17 @@ public class BaseUpgradeSystem : MonoBehaviour
         return definition != null && GetCurrentLevel(definition) >= definition.maxLevel;
     }
 
+    public bool RequiresFinalTierOreForNextLevel(UpgradeDefinition definition)
+    {
+        if (definition == null) return false;
+        int max = Mathf.Max(0, definition.maxLevel);
+        if (max <= 0) return false;
+
+        int current = GetCurrentLevel(definition);
+        // Only the *final* purchase (e.g. Lv 4 -> 5) requires Zenithite.
+        return current == max - 1;
+    }
+
     public bool CanAfford(UpgradeDefinition definition)
     {
         if (definition == null)
@@ -318,6 +332,14 @@ public class BaseUpgradeSystem : MonoBehaviour
             return false;
         }
 
+        if (RequiresFinalTierOreForNextLevel(definition))
+        {
+            if (bank.GetAmount(FinalTierOreId) < FinalTierOreCost)
+            {
+                return false;
+            }
+        }
+
         for (int i = 0; i < definition.resourceCosts.Count; i++)
         {
             UpgradeDefinition.ResourceCost cost = definition.resourceCosts[i];
@@ -340,6 +362,14 @@ public class BaseUpgradeSystem : MonoBehaviour
         if (InventorySystem.Instance == null)
         {
             return false;
+        }
+
+        if (RequiresFinalTierOreForNextLevel(definition))
+        {
+            if (!InventorySystem.Instance.HasResource(FinalTierOreId, FinalTierOreCost))
+            {
+                return false;
+            }
         }
 
         for (int i = 0; i < definition.resourceCosts.Count; i++)
@@ -381,6 +411,14 @@ public class BaseUpgradeSystem : MonoBehaviour
             }
         }
 
+        if (RequiresFinalTierOreForNextLevel(definition))
+        {
+            if (!bank.TrySpendResource(FinalTierOreId, FinalTierOreCost))
+            {
+                return false;
+            }
+        }
+
         PermanentUpgradeSystem.Instance.AddUpgradeLevel(definition.upgradeId, 1);
         ReapplyAllUpgradeEffects(false);
         OnUpgradesChanged?.Invoke();
@@ -403,6 +441,11 @@ public class BaseUpgradeSystem : MonoBehaviour
             }
 
             InventorySystem.Instance.SpendResource(cost.resourceId, cost.amount);
+        }
+
+        if (RequiresFinalTierOreForNextLevel(definition))
+        {
+            InventorySystem.Instance.SpendResource(FinalTierOreId, FinalTierOreCost);
         }
 
         PermanentUpgradeSystem.Instance.AddUpgradeLevel(definition.upgradeId, 1);

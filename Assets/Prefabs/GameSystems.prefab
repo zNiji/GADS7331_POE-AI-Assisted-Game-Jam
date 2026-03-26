@@ -205,6 +205,9 @@ MonoBehaviour:
   defaultResourceId: Iron
   crystalResourceId: Crystal
   uraniumResourceId: Uranium
+  zenithResourceId: Zenithite
+  zenithSpawnChance: 0.15
+  zenithMinDifficultyT: 0.75
   spawnOnStart: 1
   clearSpawnedOnRespawn: 1
   minDifficultyDistance: 0

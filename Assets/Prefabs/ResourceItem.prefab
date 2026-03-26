@@ -141,6 +141,7 @@ MonoBehaviour:
   ironItemSprite: {fileID: 21300000, guid: 1c504d3c15fe17e4db87bbc694f14f04, type: 3}
   crystalItemSprite: {fileID: 21300000, guid: 70367b76f21fbfd46bede495104a6949, type: 3}
   uraniumItemSprite: {fileID: 21300000, guid: e0a000d5efaf54a45a206eecf1aca575, type: 3}
+  zenithItemSprite: {fileID: 21300000, guid: 55686075fdf51c444b25b2a21bdcaa56, type: 3}
   amount: 1
   requirePlayerTag: 1
   pickupSfx: {fileID: 0}

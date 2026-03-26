@@ -9,6 +9,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
     [SerializeField] private Sprite ironNodeSprite;
     [SerializeField] private Sprite crystalNodeSprite;
     [SerializeField] private Sprite uraniumNodeSprite;
+    [SerializeField] private Sprite zenithNodeSprite;
     [SerializeField] private int maxHealth = 3;
     [SerializeField] private int dropAmount = 1;
     [SerializeField] private ResourceItem resourceDropPrefab;
@@ -55,6 +56,11 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         if (string.IsNullOrWhiteSpace(resourceId)) return;
 
         string lower = resourceId.ToLowerInvariant();
+        if (lower.Contains("zenith"))
+        {
+            if (zenithNodeSprite != null) spriteRenderer.sprite = zenithNodeSprite;
+            return;
+        }
         if (lower.Contains("uranium"))
         {
             if (uraniumNodeSprite != null) spriteRenderer.sprite = uraniumNodeSprite;

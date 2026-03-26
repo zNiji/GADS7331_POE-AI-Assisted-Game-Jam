@@ -15,6 +15,11 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private string defaultResourceId = "Iron";
     [SerializeField] private string crystalResourceId = "Crystal";
     [SerializeField] private string uraniumResourceId = "Uranium";
+    [SerializeField] private string zenithResourceId = "Zenithite";
+
+    [Header("Ultra-Rare Ore (Zenithite)")]
+    [SerializeField, Range(0f, 1f)] private float zenithSpawnChance = 0.15f; // 10-20% target
+    [SerializeField] private float zenithMinDifficultyT = 0.75f; // prefer far/high-tier spawns
 
     [Header("Behavior")]
     [SerializeField] private bool spawnOnStart = true;
@@ -382,6 +387,38 @@ public class LevelSetupSpawner : MonoBehaviour
         // Include inactive spawn points; otherwise some tiers can end up empty.
         SpawnPoint2D[] points = FindObjectsByType<SpawnPoint2D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         Vector3 playerSpawnPos = GetPlayerSpawnPosition();
+
+        // Zenithite: extremely rare, at most ONE per level, and only sometimes spawns at all.
+        // Implemented by "promoting" one existing resource spawn point to Zenithite.
+        SpawnPoint2D zenithPoint = null;
+        if (type == SpawnPoint2D.SpawnType.Resource && !string.IsNullOrWhiteSpace(zenithResourceId))
+        {
+            if (Random.value <= Mathf.Clamp01(zenithSpawnChance))
+            {
+                List<SpawnPoint2D> candidates = new List<SpawnPoint2D>();
+                for (int i = 0; i < points.Length; i++)
+                {
+                    SpawnPoint2D p = points[i];
+                    if (p == null || p.Type != SpawnPoint2D.SpawnType.Resource) continue;
+
+                    float t = GetDifficultyT(p.transform.position, playerSpawnPos);
+                    if (t >= zenithMinDifficultyT)
+                    {
+                        candidates.Add(p);
+                    }
+                }
+
+                if (candidates.Count > 0)
+                {
+                    // Prefer the farthest few candidates so it feels like an endgame ore.
+                    candidates.Sort((a, b) =>
+                        GetDifficultyT(b.transform.position, playerSpawnPos).CompareTo(GetDifficultyT(a.transform.position, playerSpawnPos)));
+
+                    int topN = Mathf.Min(6, candidates.Count);
+                    zenithPoint = candidates[Random.Range(0, topN)];
+                }
+            }
+        }
         List<Vector3> spawnedEnemyPositions = null;
         float minEnemySepSqr = minEnemySpawnSeparation * minEnemySpawnSeparation;
         if (type == SpawnPoint2D.SpawnType.Enemy && enforceEnemySpawnSeparation)
@@ -424,7 +461,9 @@ public class LevelSetupSpawner : MonoBehaviour
                 ResourceNode node = spawned != null ? spawned.GetComponent<ResourceNode>() : null;
                 if (node != null)
                 {
-                    string resourceId = DetermineResourceId(point);
+                    string resourceId = (zenithPoint != null && point == zenithPoint)
+                        ? zenithResourceId
+                        : DetermineResourceId(point);
                     node.SetResourceId(resourceId);
 
                     float difficultyT = GetDifficultyT(point.transform.position, playerSpawnPos);
@@ -432,6 +471,13 @@ public class LevelSetupSpawner : MonoBehaviour
                     {
                         float healthMult = Mathf.Lerp(minUraniumHealthMultiplier, maxUraniumHealthMultiplier, difficultyT);
                         float dropMult = Mathf.Lerp(minUraniumDropMultiplier, maxUraniumDropMultiplier, difficultyT);
+                        node.ApplyDifficulty(healthMult, dropMult);
+                    }
+                    else if (string.Equals(resourceId, zenithResourceId))
+                    {
+                        // Zenithite is endgame: very tough to mine, low drop amount.
+                        float healthMult = Mathf.Lerp(minUraniumHealthMultiplier, maxUraniumHealthMultiplier, difficultyT) * 1.6f;
+                        float dropMult = 1f; // keep it scarce; a single node should only give 1.
                         node.ApplyDifficulty(healthMult, dropMult);
                     }
                     else if (string.Equals(resourceId, crystalResourceId))
@@ -562,6 +608,10 @@ public class LevelSetupSpawner : MonoBehaviour
         if (!string.IsNullOrWhiteSpace(idHint))
         {
             string lower = idHint.ToLowerInvariant();
+            if (lower.Contains("zenith"))
+            {
+                return zenithResourceId;
+            }
             if (lower.Contains("uranium"))
             {
                 return uraniumResourceId;
