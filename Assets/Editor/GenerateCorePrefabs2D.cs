@@ -1149,6 +1149,15 @@ public static class GenerateCorePrefabs2D
         ammoRt.anchorMax = new Vector2(1f, 0f);
         ammoRt.pivot = new Vector2(1f, 0f);
         ammoRt.anchoredPosition = new Vector2(-20f, 20f);
+
+        // Upgrade levels (bottom-right, above ammo).
+        Text upgradesText = CreateText("UpgradesLabel", canvasGO.transform, new Vector2(20f, -120f), 16, TextAnchor.UpperRight);
+        RectTransform upgradesRt = upgradesText.GetComponent<RectTransform>();
+        upgradesRt.sizeDelta = new Vector2(520f, 220f);
+        upgradesRt.anchorMin = new Vector2(1f, 0f);
+        upgradesRt.anchorMax = new Vector2(1f, 0f);
+        upgradesRt.pivot = new Vector2(1f, 0f);
+        upgradesRt.anchoredPosition = new Vector2(-20f, 62f);
         Text resourcesText = CreateText("ResourcesText", canvasGO.transform, new Vector2(20f, -120f), 18, TextAnchor.UpperLeft);
         Text biomeText = CreateText("BiomeLabel", canvasGO.transform, new Vector2(20f, -250f), 18, TextAnchor.MiddleLeft);
         Text promptText = CreateCenteredText("PromptText", canvasGO.transform, new Vector2(0f, 120f), 22);
@@ -1222,6 +1231,7 @@ public static class GenerateCorePrefabs2D
         hudSO.FindProperty("suitIntegrityLabel").objectReferenceValue = suitText;
         hudSO.FindProperty("oxygenLabel").objectReferenceValue = oxygenText;
         hudSO.FindProperty("ammoLabel").objectReferenceValue = ammoText;
+        hudSO.FindProperty("upgradesLabel").objectReferenceValue = upgradesText;
         hudSO.FindProperty("resourcesText").objectReferenceValue = resourcesText;
         hudSO.FindProperty("biomeLabel").objectReferenceValue = biomeText;
         hudSO.FindProperty("promptText").objectReferenceValue = promptText;

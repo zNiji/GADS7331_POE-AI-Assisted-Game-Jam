@@ -83,7 +83,9 @@ public class LevelSetupSpawner : MonoBehaviour
 
     private void Start()
     {
-        if (spawnOnStart)
+        // GameManager handles spawning after scene load (and after save-load reapply).
+        // If we also spawn here, we do the work twice which causes a noticeable hitch.
+        if (spawnOnStart && GameManager.Instance == null)
         {
             SpawnAll();
         }

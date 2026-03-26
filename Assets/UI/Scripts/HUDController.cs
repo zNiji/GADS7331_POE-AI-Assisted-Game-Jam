@@ -26,8 +26,10 @@ public class HUDController : MonoBehaviour
 
     [Header("Combat UI")]
     [SerializeField] private Text ammoLabel;
+    [SerializeField] private Text upgradesLabel;
 
     private PlayerAmmo playerAmmo;
+    private BaseUpgradeSystem upgradeSystem;
 
     private void OnEnable()
     {
@@ -56,6 +58,13 @@ public class HUDController : MonoBehaviour
             OnAmmoChanged(playerAmmo.CurrentAmmo, playerAmmo.MaxAmmo);
         }
 
+        upgradeSystem = FindAnyObjectByType<BaseUpgradeSystem>();
+        if (upgradeSystem != null)
+        {
+            upgradeSystem.OnUpgradesChanged += RefreshUpgradeLevels;
+        }
+        RefreshUpgradeLevels();
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.OnInventoryChanged += RefreshResources;
@@ -80,6 +89,7 @@ public class HUDController : MonoBehaviour
         StyleText(suitIntegrityLabel);
         StyleText(oxygenLabel);
         StyleText(ammoLabel);
+        StyleText(upgradesLabel);
         StyleText(resourcesText);
         StyleText(biomeLabel);
         StyleText(promptText);
@@ -143,6 +153,11 @@ public class HUDController : MonoBehaviour
             playerAmmo.OnAmmoChanged -= OnAmmoChanged;
         }
 
+        if (upgradeSystem != null)
+        {
+            upgradeSystem.OnUpgradesChanged -= RefreshUpgradeLevels;
+        }
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.OnInventoryChanged -= RefreshResources;
@@ -153,6 +168,39 @@ public class HUDController : MonoBehaviour
     {
         if (ammoLabel == null) return;
         ammoLabel.text = "Ammo: " + current + "/" + max;
+    }
+
+    private void RefreshUpgradeLevels()
+    {
+        if (upgradesLabel == null)
+        {
+            return;
+        }
+
+        if (PermanentUpgradeSystem.Instance == null || upgradeSystem == null || upgradeSystem.AvailableUpgrades == null)
+        {
+            upgradesLabel.text = string.Empty;
+            upgradesLabel.enabled = false;
+            return;
+        }
+
+        string output = "Upgrades";
+
+        for (int i = 0; i < upgradeSystem.AvailableUpgrades.Count; i++)
+        {
+            UpgradeDefinition def = upgradeSystem.AvailableUpgrades[i];
+            if (def == null || string.IsNullOrWhiteSpace(def.upgradeId))
+            {
+                continue;
+            }
+
+            int level = PermanentUpgradeSystem.Instance.GetUpgradeLevel(def.upgradeId);
+            int maxLevel = Mathf.Max(0, def.maxLevel);
+            output += "\n" + def.displayName + ": Lv " + level + (maxLevel > 0 ? ("/" + maxLevel) : string.Empty);
+        }
+
+        upgradesLabel.text = output;
+        upgradesLabel.enabled = true;
     }
 
     public void SetBiome(string biomeName)

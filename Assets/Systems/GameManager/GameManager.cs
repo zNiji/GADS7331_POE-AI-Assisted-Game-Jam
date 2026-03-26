@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -27,8 +28,8 @@ public class GameManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
 
         ResolveReferences();
-        CacheRunResettables();
-        EnsureCameraRendering();
+        // Defer heavy scene-wide scans to avoid startup hitch.
+        StartCoroutine(DeferredInitNextFrame());
 
         // Reinitialize when gameplay scene is loaded (GameManager persists across scenes).
         UnityEngine.SceneManagement.SceneManager.sceneLoaded += HandleSceneLoaded;
@@ -46,6 +47,13 @@ public class GameManager : MonoBehaviour
         // Some objects (and/or camera components) may enable/disable after Awake across scene loads.
         // Re-apply camera display settings after the first frame.
         Invoke(nameof(EnsureCameraRendering), 0f);
+    }
+
+    private IEnumerator DeferredInitNextFrame()
+    {
+        yield return null;
+        EnsureCameraRendering();
+        CacheRunResettables();
     }
 
     private void OnDestroy()
@@ -88,6 +96,8 @@ public class GameManager : MonoBehaviour
         EnsurePlayerDeathSubscription();
         EnsureCameraRendering();
 
+        LoadingOverlayUI.Show("Loading...");
+
         // Start a fresh run state first (clears run inventory / resets run-state objects).
         ResetRun();
 
@@ -126,6 +136,8 @@ public class GameManager : MonoBehaviour
 
             runResettables[i].ResetForNewRun();
         }
+
+        LoadingOverlayUI.Hide();
     }
 
     private void RefreshPlayerSpawnPosition()
