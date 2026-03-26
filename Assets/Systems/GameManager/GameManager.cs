@@ -59,6 +59,13 @@ public class GameManager : MonoBehaviour
 
     private void HandleSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
+        // Only reseed/spawn when we enter gameplay/level scenes.
+        // Main-menu scene should never instantiate enemies/bullets.
+        if (string.IsNullOrWhiteSpace(scene.name) || !scene.name.StartsWith("Level_"))
+        {
+            return;
+        }
+
         // Be robust: scene name filtering can break if the gameplay scene is renamed.
         // Instead, only proceed when we can see core gameplay objects.
         PlayerStats psProbe = FindAnyObjectByType<PlayerStats>();

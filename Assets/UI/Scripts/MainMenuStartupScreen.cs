@@ -26,10 +26,53 @@ public class MainMenuStartupScreen : MonoBehaviour
     private GameObject saveSlotsPanel;
     private GameObject loadSavesButtonGO;
     private GameObject newGameButtonGO;
+    private static Sprite cachedMenuThemeBackground;
+
+    private void Awake()
+    {
+        // Freeze gameplay immediately when the main menu scene loads.
+        Time.timeScale = 0f;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetPause(true);
+        }
+
+        // Don't let the in-game pause overlay block main-menu interactions.
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(false);
+            // Prevent in-game HUD (Extract button / prompts) from carrying over.
+            HUDController.Instance.gameObject.SetActive(false);
+        }
+
+        EnsureMenuAudioManagerAndHookButtons();
+
+        // Resume menu music now that we're back in the menu.
+        if (MainMenuAudioManager.Instance != null)
+        {
+            MainMenuAudioManager.Instance.PlayMusic();
+        }
+
+        // Safety: even if HUDController.Instance isn't ready/present yet,
+        // explicitly hide the extracted/interaction prompt UI.
+        SetObjectsActiveByNameIncludingInactive(false, "ExtractButton", "ExtractButtonText", "PromptText", "ExtractionStatusText");
+    }
 
     private void Start()
     {
-        Time.timeScale = 1f;
+        // Main menu should not allow gameplay to continue in the background.
+        Time.timeScale = 0f;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetPause(true);
+        }
+        // Ensure the in-game pause overlay doesn't block main-menu clicks.
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(false);
+            HUDController.Instance.gameObject.SetActive(true);
+        }
+
         startupTime = Time.unscaledTime;
         // Always show the main menu immediately so returning from pause can't get stuck
         // behind the "press any key" startup panel.
@@ -47,6 +90,8 @@ public class MainMenuStartupScreen : MonoBehaviour
 
         EnsureNewGameButtonUI();
         ReflowMainMenuButtonsForLoadGame();
+
+        EnsureMainMenuThemeVisuals();
     }
 
     private void EnsureNewGameButtonUI()
@@ -108,6 +153,19 @@ public class MainMenuStartupScreen : MonoBehaviour
         // Clears extracted/banked materials and starts a clean run.
         // Note: inventory run resources are already cleared by GameManager.ResetRun().
         Time.timeScale = 1f;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetPause(false);
+        }
+        if (MainMenuAudioManager.Instance != null)
+        {
+            MainMenuAudioManager.Instance.StopMusic();
+        }
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(false);
+            HUDController.Instance.gameObject.SetActive(true);
+        }
         GameSaveSystem.ClearPendingLoadSlot();
 
         // Clear permanent upgrades too (fresh start from the beginning).
@@ -187,6 +245,19 @@ public class MainMenuStartupScreen : MonoBehaviour
     public void StartGame()
     {
         Time.timeScale = 1f;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetPause(false);
+        }
+        if (MainMenuAudioManager.Instance != null)
+        {
+            MainMenuAudioManager.Instance.StopMusic();
+        }
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(false);
+            HUDController.Instance.gameObject.SetActive(true);
+        }
         GameSaveSystem.ClearPendingLoadSlot();
         SetStartupVisible(false);
         SetMainMenuVisible(false);
@@ -215,6 +286,18 @@ public class MainMenuStartupScreen : MonoBehaviour
     private void LoadSaveSlot(int slotIndex0Based)
     {
         Time.timeScale = 1f;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.SetPause(false);
+        }
+        if (MainMenuAudioManager.Instance != null)
+        {
+            MainMenuAudioManager.Instance.StopMusic();
+        }
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(false);
+        }
         GameSaveSystem.SetPendingLoadSlot(slotIndex0Based);
 
         SetStartupVisible(false);
@@ -373,6 +456,7 @@ public class MainMenuStartupScreen : MonoBehaviour
         }
 
         saveSlotsPanel.SetActive(false);
+        ApplyThemeToButtonsIn(saveSlotsPanel != null ? saveSlotsPanel.transform : null);
     }
 
     private void ReflowMainMenuButtonsForLoadGame()
@@ -399,6 +483,7 @@ public class MainMenuStartupScreen : MonoBehaviour
 
         // Our load button is created under buttonsRoot too (LoadSavesButton).
         // (Set above)
+        ApplyThemeToButtonsIn(buttonsRoot);
     }
 
     private void SetButtonY(Transform buttonsRoot, string buttonName, float y)
@@ -635,6 +720,64 @@ public class MainMenuStartupScreen : MonoBehaviour
 #endif
     }
 
+    private void EnsureMenuAudioManagerAndHookButtons()
+    {
+        // This manager needs clips assigned in the inspector; if you haven't added them yet,
+        // it will just no-op.
+        MainMenuAudioManager mgr = MainMenuAudioManager.Instance;
+        if (mgr == null)
+        {
+            // Try to find an existing one in the scene.
+            mgr = UnityEngine.Object.FindAnyObjectByType<MainMenuAudioManager>();
+        }
+
+        if (mgr == null)
+        {
+            // Create it so we always get click + music behavior (generated clips if no assets assigned).
+            GameObject go = new GameObject("MainMenuAudioManager", typeof(MainMenuAudioManager));
+            mgr = go.GetComponent<MainMenuAudioManager>();
+        }
+
+        // Hook clicks on all menu buttons.
+        if (mgr != null)
+        {
+            if (startupPanel != null) HookButtonsRecursively(startupPanel.transform, mgr);
+            if (mainMenuPanel != null) HookButtonsRecursively(mainMenuPanel.transform, mgr);
+        }
+    }
+
+    private void HookButtonsRecursively(Transform root, MainMenuAudioManager mgr)
+    {
+        if (root == null || mgr == null) return;
+        Button[] buttons = root.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            if (buttons[i] == null) continue;
+            mgr.AttachClickSound(buttons[i]);
+        }
+    }
+
+    private void SetObjectsActiveByNameIncludingInactive(bool active, params string[] names)
+    {
+        if (names == null || names.Length == 0) return;
+
+        Transform[] all = Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < all.Length; i++)
+        {
+            Transform t = all[i];
+            if (t == null) continue;
+
+            for (int n = 0; n < names.Length; n++)
+            {
+                if (t.name == names[n])
+                {
+                    t.gameObject.SetActive(active);
+                    break;
+                }
+            }
+        }
+    }
+
     private void SetStartupVisible(bool isVisible)
     {
         if (startupPanel != null)
@@ -649,5 +792,196 @@ public class MainMenuStartupScreen : MonoBehaviour
         {
             mainMenuPanel.SetActive(isVisible);
         }
+    }
+
+    private void EnsureMainMenuThemeVisuals()
+    {
+        if (mainMenuPanel == null) return;
+
+        // Slightly dark overlay so text/buttons remain readable.
+        Image panelImage = mainMenuPanel.GetComponent<Image>();
+        if (panelImage != null)
+        {
+            panelImage.color = new Color(0f, 0f, 0f, 0.22f);
+        }
+
+        EnsureMainMenuBackgroundImage(mainMenuPanel.transform);
+
+        Transform buttonsRoot = mainMenuPanel.transform.Find("ButtonsRoot");
+        if (buttonsRoot != null)
+        {
+            ApplyThemeToButtonsIn(buttonsRoot);
+        }
+        ApplyThemeToButtonsIn(saveSlotsPanel != null ? saveSlotsPanel.transform : null);
+
+        // Also theme the HowTo/Options pages (generated by editor tools).
+        Transform howToT = mainMenuPanel.transform.Find("HowToPanel");
+        if (howToT != null) ApplyThemeToButtonsIn(howToT);
+        Transform optionsT = mainMenuPanel.transform.Find("OptionsPanel");
+        if (optionsT != null) ApplyThemeToButtonsIn(optionsT);
+    }
+
+    private void EnsureMainMenuBackgroundImage(Transform parent)
+    {
+        if (parent == null) return;
+
+        Transform existing = parent.Find("ThemeBackground");
+        GameObject bgGO;
+        if (existing != null)
+        {
+            bgGO = existing.gameObject;
+        }
+        else
+        {
+            bgGO = new GameObject("ThemeBackground", typeof(RectTransform), typeof(Image));
+            bgGO.transform.SetParent(parent, false);
+        }
+
+        RectTransform rt = bgGO.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        Image img = bgGO.GetComponent<Image>();
+        img.sprite = GetOrCreateMenuThemeBackground();
+        img.type = Image.Type.Simple;
+        img.preserveAspect = false;
+        img.color = Color.white;
+        img.raycastTarget = false;
+
+        // Ensure background is drawn behind all menu UI.
+        bgGO.transform.SetAsFirstSibling();
+    }
+
+    private void ApplyThemeToButtonsIn(Transform root)
+    {
+        if (root == null) return;
+
+        Button[] buttons = root.GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button b = buttons[i];
+            if (b == null) continue;
+
+            Image img = b.GetComponent<Image>();
+            if (img != null)
+            {
+                img.color = new Color(0.08f, 0.18f, 0.16f, 0.95f);
+
+                Outline imgOutline = img.GetComponent<Outline>();
+                if (imgOutline == null) imgOutline = img.gameObject.AddComponent<Outline>();
+                imgOutline.effectColor = new Color(0.20f, 0.90f, 0.95f, 0.45f);
+                imgOutline.effectDistance = new Vector2(1f, -1f);
+                imgOutline.useGraphicAlpha = true;
+            }
+
+            ColorBlock cb = b.colors;
+            cb.normalColor = new Color(0.08f, 0.18f, 0.16f, 0.95f);
+            cb.highlightedColor = new Color(0.14f, 0.28f, 0.25f, 1f);
+            cb.pressedColor = new Color(0.06f, 0.13f, 0.12f, 1f);
+            cb.selectedColor = cb.highlightedColor;
+            b.colors = cb;
+
+            Text t = b.GetComponentInChildren<Text>(true);
+            if (t != null)
+            {
+                t.fontStyle = FontStyle.Bold;
+                t.color = new Color(0.92f, 0.98f, 1f, 1f);
+
+                Outline outline = t.GetComponent<Outline>();
+                if (outline == null) outline = t.gameObject.AddComponent<Outline>();
+                outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+                outline.effectDistance = new Vector2(1f, -1f);
+                outline.useGraphicAlpha = true;
+            }
+        }
+    }
+
+    private Sprite GetOrCreateMenuThemeBackground()
+    {
+        if (cachedMenuThemeBackground != null) return cachedMenuThemeBackground;
+
+        int w = 512;
+        int h = 288;
+        Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color baseA = new Color(0.02f, 0.07f, 0.11f, 1f);
+        Color baseB = new Color(0.03f, 0.14f, 0.10f, 1f);
+        Color glowCyan = new Color(0.22f, 0.95f, 1f, 1f);
+        Color glowGreen = new Color(0.22f, 1f, 0.55f, 1f);
+        Color glowPurple = new Color(0.78f, 0.34f, 1f, 1f);
+        Color vine = new Color(0.08f, 0.36f, 0.20f, 1f);
+        Color canopy = new Color(0.05f, 0.24f, 0.18f, 1f);
+
+        float Hash01(int x, int y, int s)
+        {
+            int n = x * 73856093 ^ y * 19349663 ^ s * 83492791;
+            n = (n ^ (n >> 13)) * 1274126177;
+            uint un = (uint)(n & 0x7fffffff);
+            return un / (float)0x7fffffff;
+        }
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float t = Mathf.Clamp01(y / (float)(h - 1));
+                Color c = Color.Lerp(baseA, baseB, t);
+
+                // Misty canopy blobs.
+                float b0 = Mathf.Exp(-((x - w * 0.20f) * (x - w * 0.20f) + (y - h * 0.22f) * (y - h * 0.22f)) / (2f * w * 0.08f * w * 0.08f));
+                float b1 = Mathf.Exp(-((x - w * 0.58f) * (x - w * 0.58f) + (y - h * 0.28f) * (y - h * 0.28f)) / (2f * w * 0.10f * w * 0.10f));
+                float canopyT = Mathf.Clamp01(b0 + b1);
+                c = Color.Lerp(c, canopy, canopyT * 0.6f);
+
+                // Hanging vines.
+                float v = Hash01(x + 31, y + 7, 707);
+                if (v < 0.008f && y < h * 0.82f)
+                {
+                    c = Color.Lerp(c, vine, 0.55f);
+                }
+
+                // Bioluminescent specks.
+                float s = Hash01(x, y, 999);
+                if (s < 0.008f)
+                {
+                    Color g = (s < 0.0025f) ? glowPurple : (s < 0.005f) ? glowCyan : glowGreen;
+                    c = Color.Lerp(c, g, 0.45f);
+                }
+
+                // Larger glow orbs near lower half.
+                for (int i = 0; i < 6; i++)
+                {
+                    float rx = Hash01(i * 11 + 1, i * 7 + 3, 1234);
+                    float ry = Hash01(i * 5 + 9, i * 13 + 2, 4321);
+                    float ox = 30f + rx * (w - 60f);
+                    float oy = h * (0.45f + 0.45f * ry);
+                    float dx = x - ox;
+                    float dy = y - oy;
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    float r = 18f + 10f * (i % 3);
+                    if (dist <= r)
+                    {
+                        float g = 1f - dist / r;
+                        Color gc = (i % 3 == 0) ? glowCyan : (i % 3 == 1) ? glowGreen : glowPurple;
+                        c = Color.Lerp(c, gc, g * 0.35f);
+                    }
+                }
+
+                c.r = Mathf.Clamp01(c.r);
+                c.g = Mathf.Clamp01(c.g);
+                c.b = Mathf.Clamp01(c.b);
+                c.a = 1f;
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        cachedMenuThemeBackground = Sprite.Create(tex, new Rect(0f, 0f, w, h), new Vector2(0.5f, 0.5f), 100f);
+        cachedMenuThemeBackground.name = "spr_mainmenu_theme_bg_runtime";
+        return cachedMenuThemeBackground;
     }
 }
