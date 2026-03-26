@@ -25,6 +25,20 @@ public class ExtractionSystem : MonoBehaviour
         }
     }
 
+    private void LateUpdate()
+    {
+        // Be robust across respawns/scene reloads: PlayerStats reference can change.
+        if (playerStats == null)
+        {
+            playerStats = FindAnyObjectByType<PlayerStats>();
+            if (playerStats != null)
+            {
+                playerStats.OnDied -= HandlePlayerDied;
+                playerStats.OnDied += HandlePlayerDied;
+            }
+        }
+    }
+
     private void OnEnable()
     {
         if (playerStats != null)
@@ -117,13 +131,24 @@ public class ExtractionSystem : MonoBehaviour
 
     private void HandlePlayerDied()
     {
-        extractionRequested = false;
-        if (HUDController.Instance != null)
+        CancelExtraction(showFailMessage: true);
+    }
+
+    public void CancelExtraction(bool showFailMessage)
+    {
+        if (!extractionRequested)
         {
-            HUDController.Instance.SetExtractionStatus("Extraction failed. Resources lost.");
+            return;
         }
 
-        if (GameAudioManager.Instance != null)
+        extractionRequested = false;
+
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetExtractionStatus(showFailMessage ? "Extraction failed. Resources lost." : string.Empty);
+        }
+
+        if (showFailMessage && GameAudioManager.Instance != null)
         {
             GameAudioManager.Instance.PlayExtractFail(transform.position);
         }

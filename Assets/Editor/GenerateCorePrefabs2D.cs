@@ -1171,11 +1171,13 @@ public static class GenerateCorePrefabs2D
         // Upgrade levels (bottom-right, above ammo).
         Text upgradesText = CreateText("UpgradesLabel", canvasGO.transform, new Vector2(20f, -120f), 16, TextAnchor.UpperRight);
         RectTransform upgradesRt = upgradesText.GetComponent<RectTransform>();
-        upgradesRt.sizeDelta = new Vector2(520f, 220f);
+        upgradesRt.sizeDelta = new Vector2(520f, 320f);
         upgradesRt.anchorMin = new Vector2(1f, 0f);
         upgradesRt.anchorMax = new Vector2(1f, 0f);
         upgradesRt.pivot = new Vector2(1f, 0f);
         upgradesRt.anchoredPosition = new Vector2(-20f, 62f);
+        upgradesText.verticalOverflow = VerticalWrapMode.Overflow;
+        upgradesText.horizontalOverflow = HorizontalWrapMode.Overflow;
         Text resourcesText = CreateText("ResourcesText", canvasGO.transform, new Vector2(20f, -120f), 18, TextAnchor.UpperLeft);
         Text biomeText = CreateText("BiomeLabel", canvasGO.transform, new Vector2(20f, -250f), 18, TextAnchor.MiddleLeft);
         Text promptText = CreateCenteredText("PromptText", canvasGO.transform, new Vector2(0f, 120f), 22);

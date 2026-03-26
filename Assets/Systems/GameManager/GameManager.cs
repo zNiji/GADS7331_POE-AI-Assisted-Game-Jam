@@ -385,6 +385,13 @@ public class GameManager : MonoBehaviour
             deathUpgradeMenu.HideImmediate();
         }
 
+        // If the player dies during an extraction countdown, cancel it immediately.
+        ExtractionSystem extraction = FindAnyObjectByType<ExtractionSystem>();
+        if (extraction != null)
+        {
+            extraction.CancelExtraction(showFailMessage: false);
+        }
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.ClearRunResources();

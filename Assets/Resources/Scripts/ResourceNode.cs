@@ -3,6 +3,15 @@ using UnityEngine;
 [RequireComponent(typeof(Collider2D))]
 public class ResourceNode : MonoBehaviour, IRunResettable
 {
+    // Mining balance:
+    // - Early mining upgrades should still take multiple hits (5-6 on Iron).
+    // - Final mining upgrade should one-hit common ore.
+    // - Rarer ores should take longer to mine.
+    private const int IRON_BASE_HP = 6;
+    private const int CRYSTAL_BASE_HP = 10;
+    private const int URANIUM_BASE_HP = 14;
+    private const int ZENITH_BASE_HP = 18;
+
     [Header("Resource Settings")]
     [SerializeField] private string resourceId = "Iron";
     [Header("Alien Tile Sprites (Optional)")]
@@ -39,15 +48,47 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
 
         resourceId = id;
+        ApplyBaseHealthForResourceId(resetHealth: true);
         UpdateSpriteForResourceId();
     }
 
     private void Awake()
     {
-        currentHealth = maxHealth;
         triggerCollider = GetComponent<Collider2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        ApplyBaseHealthForResourceId(resetHealth: true);
         UpdateSpriteForResourceId();
+    }
+
+    private void ApplyBaseHealthForResourceId(bool resetHealth)
+    {
+        if (string.IsNullOrWhiteSpace(resourceId))
+        {
+            resourceId = "Iron";
+        }
+
+        string lower = resourceId.ToLowerInvariant();
+        if (lower.Contains("zenith"))
+        {
+            maxHealth = ZENITH_BASE_HP;
+        }
+        else if (lower.Contains("uranium"))
+        {
+            maxHealth = URANIUM_BASE_HP;
+        }
+        else if (lower.Contains("crystal"))
+        {
+            maxHealth = CRYSTAL_BASE_HP;
+        }
+        else
+        {
+            maxHealth = IRON_BASE_HP;
+        }
+
+        if (resetHealth)
+        {
+            currentHealth = maxHealth;
+        }
     }
 
     private void UpdateSpriteForResourceId()
@@ -85,8 +126,28 @@ public class ResourceNode : MonoBehaviour, IRunResettable
 
         if (Input.GetKeyDown(mineKey))
         {
-            int minePower = 1 + (activeMinerUpgrades != null ? activeMinerUpgrades.BonusMiningPower : 0);
+            int upgradeLevel = activeMinerUpgrades != null ? activeMinerUpgrades.BonusMiningPower : 0;
+            int minePower = GetMiningDamageFromUpgradeLevel(upgradeLevel);
             Mine(minePower);
+        }
+    }
+
+    private static int GetMiningDamageFromUpgradeLevel(int upgradeLevel)
+    {
+        // BonusMiningPower currently maps to the mining upgrade level (0..5).
+        // Table is tuned so:
+        // - Lv 1 mines Iron in ~6 hits (HP=6, dmg=1).
+        // - Max level one-hits Iron (HP=6, dmg=6).
+        int lv = Mathf.Clamp(upgradeLevel, 0, 5);
+        switch (lv)
+        {
+            case 0: return 1;
+            case 1: return 1;
+            case 2: return 2;
+            case 3: return 3;
+            case 4: return 4;
+            case 5: return 6;
+            default: return 1;
         }
     }
 
@@ -167,7 +228,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
 
     public void ResetForNewRun()
     {
-        currentHealth = maxHealth;
+        ApplyBaseHealthForResourceId(resetHealth: true);
         playerInRange = false;
         activeMinerUpgrades = null;
         gameObject.SetActive(true);
@@ -186,6 +247,8 @@ public class ResourceNode : MonoBehaviour, IRunResettable
             return;
         }
 
+        // Start from the ore's base HP, then scale it.
+        ApplyBaseHealthForResourceId(resetHealth: false);
         maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * maxHealthMultiplier));
         dropAmount = Mathf.Max(1, Mathf.RoundToInt(dropAmount * dropMultiplier));
 

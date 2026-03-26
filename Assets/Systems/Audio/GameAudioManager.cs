@@ -201,7 +201,8 @@ public class GameAudioManager : MonoBehaviour
     public void PlayMine(Vector3 position, float volumeMultiplier = 1f)
     {
         AudioClip clip = sfxMineClip != null ? sfxMineClip : fallbackMine;
-        PlaySfxAtPoint(clip, position, volumeMultiplier);
+        // Mining is frequent feedback; play non-spatially so it doesn't get attenuated.
+        PlaySfxAtPoint(clip, null, volumeMultiplier);
     }
 
     public void PlayHeal(Vector3 position, float volumeMultiplier = 1f)
