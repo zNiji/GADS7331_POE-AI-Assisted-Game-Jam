@@ -21,8 +21,8 @@ Players must balance risk and reward: dying causes all collected resources from 
 1. In Unity, open `Assets/Scenes/MainMenu.unity`
 2. Go to **File → Build Settings**
 3. Ensure these scenes are added (and in this order):
-   - `MainMenu`
-   - `Level_01`
+  - `MainMenu`
+  - `Level_01`
 4. Select **PC, Mac & Linux Standalone**
 5. Set **Target Platform: Windows**
 6. Click **Build** (or **Build And Run**) and choose an output folder (e.g. `Builds/Windows/`)
@@ -54,3 +54,12 @@ This project was developed using AI-assisted tools:
 
 - Developer: Liam Fullard
 
+## Project Reflection
+
+Using Cursor as my primary development tool for this project was both unique and fun. While having mainly positive outcomes, there were some frustrating elements. Cursor significantly sped up construction initially by generating systems and writing code, allowing me to focus on the overall design of the code rather than building everything from scratch.
+
+However, the process did become tedious at times. The workflow often required continuous back-and-forth between Cursor and the game engine. Code would be generated, which I would have to check and test, then return to Cursor to refine or fix issues that arose. This constant repetition slowed progress drastically, and there were also times when Cursor misunderstood my instructions, leading to logic errors or miscommunication on certain features. Correcting these issues required lengthy and highly detailed prompts.
+
+One major weakness was UI implementation, especially text placements. On multiple occasions, text would overlap or be misaligned. Cursor also struggled to correct its mistakes even after multiple revisions.
+
+In conclusion, AI has been a powerful tool for speeding up development; however, it requires careful guidance and does not replace the need for human direction, iteration, and creativity.
