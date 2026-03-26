@@ -58,6 +58,10 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private float shooterBulletSpeed = 12f;
     [SerializeField] private int shooterBulletDamage = 10;
 
+    [Header("Enemy Spawn Spacing")]
+    [SerializeField] private bool enforceEnemySpawnSeparation = true;
+    [SerializeField] private float minEnemySpawnSeparation = 1.25f;
+
     [Header("Enemy Sprites")]
     [SerializeField] private Sprite floraEnemySprite;
     [SerializeField] private Sprite faunaEnemySprite;
@@ -376,6 +380,12 @@ public class LevelSetupSpawner : MonoBehaviour
         // Include inactive spawn points; otherwise some tiers can end up empty.
         SpawnPoint2D[] points = FindObjectsByType<SpawnPoint2D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
         Vector3 playerSpawnPos = GetPlayerSpawnPosition();
+        List<Vector3> spawnedEnemyPositions = null;
+        float minEnemySepSqr = minEnemySpawnSeparation * minEnemySpawnSeparation;
+        if (type == SpawnPoint2D.SpawnType.Enemy && enforceEnemySpawnSeparation)
+        {
+            spawnedEnemyPositions = new List<Vector3>();
+        }
 
         for (int i = 0; i < points.Length; i++)
         {
@@ -384,8 +394,28 @@ public class LevelSetupSpawner : MonoBehaviour
             {
                 continue;
             }
-            
+
+            if (spawnedEnemyPositions != null)
+            {
+                Vector3 p = point.transform.position;
+                bool tooClose = false;
+                for (int j = 0; j < spawnedEnemyPositions.Count; j++)
+                {
+                    if (Vector3.SqrMagnitude(spawnedEnemyPositions[j] - p) < minEnemySepSqr)
+                    {
+                        tooClose = true;
+                        break;
+                    }
+                }
+
+                if (tooClose) continue;
+            }
+
             GameObject spawned = Instantiate(prefab, point.transform.position, Quaternion.identity, parent);
+            if (spawnedEnemyPositions != null && spawned != null)
+            {
+                spawnedEnemyPositions.Add(spawned.transform.position);
+            }
 
             if (type == SpawnPoint2D.SpawnType.Resource)
             {

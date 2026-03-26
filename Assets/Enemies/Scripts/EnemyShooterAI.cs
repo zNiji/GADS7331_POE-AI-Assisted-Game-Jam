@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [RequireComponent(typeof(Collider2D))]
-public class EnemyShooterAI : MonoBehaviour
+public class EnemyShooterAI : MonoBehaviour, IRunResettable
 {
     [Header("Bullet Spawning")]
     [SerializeField] private GameObject bulletPrefab;
@@ -16,9 +16,30 @@ public class EnemyShooterAI : MonoBehaviour
 
     private Transform player;
     private float nextShotTime;
+    private EnemyAI2D enemyAI;
+
+    [Header("Line Of Sight")]
+    [SerializeField] private bool requireLineOfSight = true;
+
+    private int ObstacleMask
+    {
+        get
+        {
+            int mask = 0;
+            int ground = LayerMask.NameToLayer("Ground");
+            if (ground >= 0) mask |= (1 << ground);
+
+            int platform = LayerMask.NameToLayer("Platform");
+            if (platform >= 0) mask |= (1 << platform);
+
+            return mask;
+        }
+    }
 
     private void Awake()
     {
+        enemyAI = GetComponent<EnemyAI2D>();
+
         if (player == null)
         {
             PlayerStats stats = UnityEngine.Object.FindAnyObjectByType<PlayerStats>();
@@ -58,8 +79,22 @@ public class EnemyShooterAI : MonoBehaviour
             return;
         }
 
-        float distance = Vector2.Distance(transform.position, player.position);
-        if (distance > shootRange)
+        // Shooter should only act when the enemy is actually aggroing the player.
+        // This prevents “shoot through platforms even when not detected”.
+        if (enemyAI != null && !enemyAI.IsPlayerDetected())
+        {
+            return;
+        }
+
+        // Shooter should only consider horizontal distance (above/below shouldn't affect “in range”).
+        float horizontalDistance = Mathf.Abs(transform.position.x - player.position.x);
+        if (horizontalDistance > shootRange)
+        {
+            return;
+        }
+
+        // Shooting requires LOS so they don't fire through platforms.
+        if (requireLineOfSight && (enemyAI != null ? !enemyAI.HasLineOfSightToPlayer() : !HasLineOfSightToPlayer()))
         {
             return;
         }
@@ -109,7 +144,23 @@ public class EnemyShooterAI : MonoBehaviour
         }
     }
 
+    private bool HasLineOfSightToPlayer()
+    {
+        int mask = ObstacleMask;
+        if (mask == 0) return true; // if we can't find obstacle layers, don't block shooting
+
+        // If the line hits an obstacle collider between shooter and player, we consider it blocked.
+        RaycastHit2D hit = Physics2D.Linecast(transform.position, player.position, mask);
+        return hit.collider == null;
+    }
+
     // Intentionally no custom FindAnyObjectByType helper:
     // avoids editor warnings about hiding inherited methods.
+
+    public void ResetForNewRun()
+    {
+        // Reset shooting timing so shooters behave consistently each run.
+        nextShotTime = 0f;
+    }
 }
 

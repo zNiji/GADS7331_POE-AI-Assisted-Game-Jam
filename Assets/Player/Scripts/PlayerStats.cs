@@ -20,6 +20,10 @@ public class PlayerStats : MonoBehaviour, IDamageable
     private float baseMaxHealth;
     private float invulnerableUntilTime;
 
+    [Header("Out of Bounds (Fall Death)")]
+    [SerializeField] private bool enableFallDeath = true;
+    [SerializeField] private float fallKillY = -10f;
+
     public event Action<float, float> OnHealthChanged;
     public event Action<float, float> OnOxygenChanged;
     public event Action OnDied;
@@ -47,6 +51,38 @@ public class PlayerStats : MonoBehaviour, IDamageable
     private void Update()
     {
         DrainOxygen(Time.deltaTime * oxygenDrainPerSecond);
+
+        // If the player falls below the level, treat it as a death.
+        // This prevents infinite “out of the map” runs.
+        if (enableFallDeath && !isDead && transform.position.y < fallKillY)
+        {
+            ForceDeath();
+        }
+    }
+
+    private void ForceDeath()
+    {
+        isDead = true;
+        currentHealth = 0f;
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+
+        // Hurt/death audio is handled here so it always triggers.
+        if (GameAudioManager.Instance == null)
+        {
+            GameAudioManager existing = FindAnyObjectByType<GameAudioManager>();
+            if (existing == null)
+            {
+                GameObject go = new GameObject("GameAudioManager");
+                go.AddComponent<GameAudioManager>();
+            }
+        }
+
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayPlayerDeath(transform.position);
+        }
+
+        OnDied?.Invoke();
     }
 
     public void TakeDamage(float amount)

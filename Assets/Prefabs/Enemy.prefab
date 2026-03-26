@@ -227,17 +227,39 @@ MonoBehaviour:
   patrolPointB: {fileID: 6587678454097410878}
   patrolSpeed: 2
   patrolStopDistance: 0.1
+  preventPatrolFallingOffLedges: 1
+  ledgeCheckAhead: 0.55
+  ledgeCheckDownDistance: 2
+  ledgeCheckOriginYOffset: -0.25
+  avoidOtherEnemies: 1
+  enemyAvoidRadius: 0.35
+  enemyAvoidAhead: 0.4
+  enemyAvoidVerticalTolerance: 0.35
+  enemyAvoidDecisionCooldown: 0.2
   player: {fileID: 0}
-  detectionRange: 4
-  loseTargetRange: 6
+  detectionRange: 7
+  loseTargetRange: 10
   playerLayer:
     serializedVersion: 2
     m_Bits: 0
   fallbackToDistanceIfLayerMaskMisconfigured: 1
+  minDetectionRange: 7
+  minLoseTargetRange: 10
+  requireLineOfSightForAggro: 1
+  minHorizontalDistanceToConsiderLOS: 0.35
+  losEndpointEpsilon: 0.05
+  aggroSameLayerVerticalTolerance: 0.3
+  aggroHorizontalLOSYOffset: 0.15
   chaseSpeed: 3
+  resumePatrolIfPlayerStationary: 1
+  chaseAlignmentDistanceToPatrol: 0.25
+  playerStationaryVelocityThresholdX: 0.05
+  chaseContinueEvenIfAligned: 1
+  chaseAlignedDeadzoneX: 0.02
   contactDamage: 10
   contactDamageCooldown: 0.5
   spriteRenderer: {fileID: 4259429751584888795}
+  playerAcquireRetrySeconds: 0.5
 --- !u!1 &4556880489677286151
 GameObject:
   m_ObjectHideFlags: 0

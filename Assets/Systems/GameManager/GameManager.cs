@@ -409,7 +409,20 @@ public class GameManager : MonoBehaviour
     {
         if (playerTransform != null)
         {
-            Vector3 spawnPos = playerSpawnPoint != null ? playerSpawnPoint.position : cachedPlayerSpawnPosition;
+            // Always prefer the current scene's PlayerSpawn object; cached/serialized
+            // references can go stale across runs and scene reloads.
+            Vector3 spawnPos = cachedPlayerSpawnPosition;
+            GameObject spawnGo = GameObject.Find("PlayerSpawn");
+            if (spawnGo != null)
+            {
+                spawnPos = spawnGo.transform.position;
+                cachedPlayerSpawnPosition = spawnPos;
+            }
+            else if (playerSpawnPoint != null)
+            {
+                spawnPos = playerSpawnPoint.position;
+                cachedPlayerSpawnPosition = spawnPos;
+            }
             playerTransform.position = spawnPos;
 
             Rigidbody2D playerRb = playerTransform.GetComponent<Rigidbody2D>();

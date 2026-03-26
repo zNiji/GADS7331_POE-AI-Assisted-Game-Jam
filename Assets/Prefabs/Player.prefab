@@ -212,6 +212,8 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 256
+  minFallSpeedForLandSfx: 3
+  landSfxVolume: 1
 --- !u!114 &1638490639601870944
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -230,6 +232,8 @@ MonoBehaviour:
   damageShakeDuration: 0.12
   damageShakeMagnitude: 0.12
   spawnDamageImmunitySeconds: 1
+  enableFallDeath: 1
+  fallKillY: -10
 --- !u!114 &8452570713259099816
 MonoBehaviour:
   m_ObjectHideFlags: 0
