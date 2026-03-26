@@ -32,6 +32,23 @@ public class Bullet : MonoBehaviour
             return;
         }
 
+        // Pickups (ammo/health/oxygen) should not stop bullets.
+        // Ammo pickups should be pass-through so the player can shoot while moving.
+        if (other.GetComponentInParent<BulletAmmoPickup>() != null)
+        {
+            return;
+        }
+
+        if (other.GetComponentInParent<HealthPickup>() != null)
+        {
+            return;
+        }
+
+        if (other.GetComponentInParent<OxygenPickup>() != null)
+        {
+            return;
+        }
+
         // Ore/resources should not stop bullets.
         // Resource nodes use trigger colliders and do not implement IDamageable.
         ResourceNode resourceNode = other.GetComponentInParent<ResourceNode>();

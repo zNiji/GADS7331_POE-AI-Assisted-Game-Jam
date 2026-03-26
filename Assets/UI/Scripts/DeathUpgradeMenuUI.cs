@@ -12,9 +12,11 @@ public class DeathUpgradeMenuUI : MonoBehaviour
     [SerializeField] private Button optionAButton;
     [SerializeField] private Button optionBButton;
     [SerializeField] private Button optionCButton;
+    [SerializeField] private Button optionDButton;
     [SerializeField] private Text optionALabel;
     [SerializeField] private Text optionBLabel;
     [SerializeField] private Text optionCLabel;
+    [SerializeField] private Text optionDLabel;
     [SerializeField] private Button continueButton;
 
     private readonly List<UpgradeDefinition> currentChoices = new List<UpgradeDefinition>();
@@ -101,6 +103,10 @@ public class DeathUpgradeMenuUI : MonoBehaviour
         {
             TrySelectIndex(2);
         }
+        else if (Input.GetKeyDown(KeyCode.Alpha4))
+        {
+            TrySelectIndex(3);
+        }
         else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
         {
             ContinueWithoutUpgrade();
@@ -131,7 +137,7 @@ public class DeathUpgradeMenuUI : MonoBehaviour
             }
 
             currentChoices.Add(def);
-            if (currentChoices.Count >= 3)
+            if (currentChoices.Count >= 4)
             {
                 break;
             }
@@ -143,6 +149,7 @@ public class DeathUpgradeMenuUI : MonoBehaviour
         SetupOption(optionAButton, optionALabel, 0);
         SetupOption(optionBButton, optionBLabel, 1);
         SetupOption(optionCButton, optionCLabel, 2);
+        SetupOption(optionDButton, optionDLabel, 3);
 
         if (continueButton != null)
         {

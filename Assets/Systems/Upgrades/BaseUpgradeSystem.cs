@@ -9,6 +9,7 @@ public class BaseUpgradeSystem : MonoBehaviour
     [SerializeField] private List<UpgradeDefinition> availableUpgrades = new List<UpgradeDefinition>();
     [SerializeField] private PlayerStats playerStats;
     [SerializeField] private PlayerUpgradeEffects playerUpgradeEffects;
+    [SerializeField] private PlayerAmmo playerAmmo;
 
     public event Action OnUpgradesChanged;
 
@@ -47,6 +48,7 @@ public class BaseUpgradeSystem : MonoBehaviour
         bool hasHealth = HasUpgradeId("upgrade.max_health");
         bool hasMining = HasUpgradeId("upgrade.mining");
         bool hasDamage = HasUpgradeId("upgrade.damage");
+        bool hasStartAmmo = HasUpgradeId("upgrade.start_ammo");
         bool hasUltraDamage = HasUpgradeId("upgrade.uranium_damage");
 
         if (!hasHealth)
@@ -66,6 +68,12 @@ public class BaseUpgradeSystem : MonoBehaviour
             availableUpgrades.Add(BuildDamageUpgrade());
         }
 
+        // Starting ammo should be the 4th visible death menu slot (after health/mining/damage).
+        if (!hasStartAmmo)
+        {
+            availableUpgrades.Add(BuildStartingAmmoUpgrade());
+        }
+
         if (!hasUltraDamage)
         {
             availableUpgrades.Add(BuildUraniumDamageUpgrade());
@@ -80,6 +88,7 @@ public class BaseUpgradeSystem : MonoBehaviour
                 "upgrade.max_health",
                 "upgrade.mining",
                 "upgrade.damage",
+                "upgrade.start_ammo",
                 "upgrade.uranium_damage"
             }
         );
@@ -219,6 +228,28 @@ public class BaseUpgradeSystem : MonoBehaviour
             new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 2 },
             new UpgradeDefinition.ResourceCost { resourceId = "Uranium", amount = 1 }
         };
+        return def;
+    }
+
+    private static UpgradeDefinition BuildStartingAmmoUpgrade()
+    {
+        UpgradeDefinition def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+        def.name = "RuntimeDefault_StartingAmmo";
+        def.upgradeId = "upgrade.start_ammo";
+        def.displayName = "Starting Ammo";
+        def.description = "Increase ammo capacity at the start of each run.";
+        def.effectType = UpgradeEffectType.IncreaseStartingAmmo;
+        // Starting max ammo starts at 80, then increases by 20 per upgrade level.
+        def.effectAmountPerLevel = 20;
+        def.maxLevel = 4;
+
+        // Spend extracted/banked resources only in the death menu.
+        def.resourceCosts = new List<UpgradeDefinition.ResourceCost>
+        {
+            new UpgradeDefinition.ResourceCost { resourceId = "Iron", amount = 5 },
+            new UpgradeDefinition.ResourceCost { resourceId = "Crystal", amount = 2 }
+        };
+
         return def;
     }
 
@@ -400,6 +431,7 @@ public class BaseUpgradeSystem : MonoBehaviour
         int totalHealthBonus = 0;
         int totalMiningBonus = 0;
         int totalDamageBonus = 0;
+        int totalStartingAmmoBonus = 0;
 
         for (int i = 0; i < availableUpgrades.Count; i++)
         {
@@ -423,6 +455,9 @@ public class BaseUpgradeSystem : MonoBehaviour
                 case UpgradeEffectType.IncreaseDamage:
                     totalDamageBonus += amount;
                     break;
+                case UpgradeEffectType.IncreaseStartingAmmo:
+                    totalStartingAmmoBonus += amount;
+                    break;
             }
         }
 
@@ -436,6 +471,11 @@ public class BaseUpgradeSystem : MonoBehaviour
             playerUpgradeEffects.SetMiningPowerBonus(totalMiningBonus);
             playerUpgradeEffects.SetDamageBonus(totalDamageBonus);
         }
+
+        if (playerAmmo != null)
+        {
+            playerAmmo.ApplyStartingAmmoBonus(totalStartingAmmoBonus, healToFull);
+        }
     }
 
     private void ResolveReferences()
@@ -448,6 +488,11 @@ public class BaseUpgradeSystem : MonoBehaviour
         if (playerUpgradeEffects == null)
         {
             playerUpgradeEffects = FindAnyObjectByType<PlayerUpgradeEffects>();
+        }
+
+        if (playerAmmo == null)
+        {
+            playerAmmo = FindAnyObjectByType<PlayerAmmo>();
         }
     }
 }

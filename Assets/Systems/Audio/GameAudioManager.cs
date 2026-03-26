@@ -25,6 +25,7 @@ public class GameAudioManager : MonoBehaviour
     [SerializeField] private AudioClip sfxMineClip;
     [SerializeField] private AudioClip sfxHealClip;
     [SerializeField] private AudioClip sfxOxygenClip;
+    [SerializeField] private AudioClip sfxAmmoPickupClip;
     [SerializeField] private AudioClip sfxPlayerDeathClip;
     [SerializeField] private AudioClip sfxPlayerHurtClip;
     [SerializeField] private AudioClip sfxEnemyDeathClip;
@@ -46,6 +47,7 @@ public class GameAudioManager : MonoBehaviour
     private AudioClip fallbackMine;
     private AudioClip fallbackHeal;
     private AudioClip fallbackOxygen;
+    private AudioClip fallbackAmmoPickup;
     private AudioClip fallbackPlayerDeath;
     private AudioClip fallbackPlayerHurt;
     private AudioClip fallbackEnemyDeath;
@@ -100,6 +102,7 @@ public class GameAudioManager : MonoBehaviour
         if (sfxMineClip == null) fallbackMine = GenerateToneClip("game_sfx_mine", 0.10f, 300f, 0.20f, 1);
         if (sfxHealClip == null) fallbackHeal = GenerateToneClip("game_sfx_heal", 0.12f, 740f, 0.25f, 1);
         if (sfxOxygenClip == null) fallbackOxygen = GenerateToneClip("game_sfx_oxygen", 0.12f, 820f, 0.22f, 1);
+        if (sfxAmmoPickupClip == null) fallbackAmmoPickup = GenerateToneClip("game_sfx_ammo_pickup", 0.10f, 680f, 0.25f, 1);
         if (sfxPlayerDeathClip == null) fallbackPlayerDeath = GenerateNoiseThumpClip("game_sfx_player_death", 0.35f, 0.50f);
         if (sfxPlayerHurtClip == null) fallbackPlayerHurt = GenerateToneClip("game_sfx_player_hurt", 0.08f, 160f, 0.22f, 1);
         if (sfxEnemyDeathClip == null) fallbackEnemyDeath = GenerateNoiseThumpClip("game_sfx_enemy_death", 0.25f, 0.45f);
@@ -210,6 +213,12 @@ public class GameAudioManager : MonoBehaviour
     public void PlayOxygen(Vector3 position, float volumeMultiplier = 1f)
     {
         AudioClip clip = sfxOxygenClip != null ? sfxOxygenClip : fallbackOxygen;
+        PlaySfxAtPoint(clip, position, volumeMultiplier);
+    }
+
+    public void PlayAmmoPickup(Vector3 position, float volumeMultiplier = 1f)
+    {
+        AudioClip clip = sfxAmmoPickupClip != null ? sfxAmmoPickupClip : fallbackAmmoPickup;
         PlaySfxAtPoint(clip, position, volumeMultiplier);
     }
 

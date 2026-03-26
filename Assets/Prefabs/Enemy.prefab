@@ -211,6 +211,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxHealth: 3
   deathParticles: {fileID: 0}
+  bulletAmmoPickupPrefab: {fileID: 3476170960741831350, guid: 28dadf533423ba5489435f66f2f33eb7, type: 3}
+  ammoDropChanceBase: 0.12
+  ammoDropChanceMaxMultiplier: 1.7
+  ammoDropMin: 3
+  ammoDropMax: 8
+  ammoAmountMaxBoost: 0.7
 --- !u!114 &7269857803962428643
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -231,31 +237,32 @@ MonoBehaviour:
   ledgeCheckAhead: 0.55
   ledgeCheckDownDistance: 2
   ledgeCheckOriginYOffset: -0.25
-  avoidOtherEnemies: 1
+  avoidOtherEnemies: 0
   enemyAvoidRadius: 0.35
   enemyAvoidAhead: 0.4
   enemyAvoidVerticalTolerance: 0.35
   enemyAvoidDecisionCooldown: 0.2
   player: {fileID: 0}
-  detectionRange: 7
-  loseTargetRange: 10
+  detectionRange: 12
+  loseTargetRange: 16
   playerLayer:
     serializedVersion: 2
     m_Bits: 0
   fallbackToDistanceIfLayerMaskMisconfigured: 1
-  minDetectionRange: 7
-  minLoseTargetRange: 10
-  requireLineOfSightForAggro: 1
+  minDetectionRange: 12
+  minLoseTargetRange: 16
+  requireLineOfSightForAggro: 0
   minHorizontalDistanceToConsiderLOS: 0.35
   losEndpointEpsilon: 0.05
   aggroSameLayerVerticalTolerance: 0.3
   aggroHorizontalLOSYOffset: 0.15
   chaseSpeed: 3
-  resumePatrolIfPlayerStationary: 1
+  resumePatrolIfPlayerStationary: 0
   chaseAlignmentDistanceToPatrol: 0.25
   playerStationaryVelocityThresholdX: 0.05
   chaseContinueEvenIfAligned: 1
-  chaseAlignedDeadzoneX: 0.02
+  chaseAlignedDeadzoneX: 0.001
+  chaseSearchIfVerticalDiffAtLeast: 0.6
   contactDamage: 10
   contactDamageCooldown: 0.5
   spriteRenderer: {fileID: 4259429751584888795}

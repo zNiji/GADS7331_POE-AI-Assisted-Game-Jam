@@ -6,7 +6,8 @@ public enum UpgradeEffectType
 {
     IncreaseMaxHealth,
     IncreaseMiningSpeed,
-    IncreaseDamage
+    IncreaseDamage,
+    IncreaseStartingAmmo
 }
 
 [CreateAssetMenu(fileName = "UpgradeDefinition", menuName = "Game/Upgrades/Upgrade Definition")]

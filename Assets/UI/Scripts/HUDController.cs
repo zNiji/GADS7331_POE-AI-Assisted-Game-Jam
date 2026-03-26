@@ -24,6 +24,11 @@ public class HUDController : MonoBehaviour
     [SerializeField] private Text extractionStatusText;
     [SerializeField] private GameObject pausePanel;
 
+    [Header("Combat UI")]
+    [SerializeField] private Text ammoLabel;
+
+    private PlayerAmmo playerAmmo;
+
     private void OnEnable()
     {
         if (Instance == null)
@@ -42,6 +47,13 @@ public class HUDController : MonoBehaviour
             playerStats.OnOxygenChanged += OnOxygenChanged;
             OnHealthChanged(playerStats.CurrentHealth, playerStats.MaxHealth);
             OnOxygenChanged(playerStats.CurrentOxygen, playerStats.MaxOxygen);
+        }
+
+        playerAmmo = FindAnyObjectByType<PlayerAmmo>();
+        if (playerAmmo != null)
+        {
+            playerAmmo.OnAmmoChanged += OnAmmoChanged;
+            OnAmmoChanged(playerAmmo.CurrentAmmo, playerAmmo.MaxAmmo);
         }
 
         if (InventorySystem.Instance != null)
@@ -67,6 +79,7 @@ public class HUDController : MonoBehaviour
         // Improve legibility over busy bioluminescent backgrounds.
         StyleText(suitIntegrityLabel);
         StyleText(oxygenLabel);
+        StyleText(ammoLabel);
         StyleText(resourcesText);
         StyleText(biomeLabel);
         StyleText(promptText);
@@ -125,10 +138,21 @@ public class HUDController : MonoBehaviour
             playerStats.OnOxygenChanged -= OnOxygenChanged;
         }
 
+        if (playerAmmo != null)
+        {
+            playerAmmo.OnAmmoChanged -= OnAmmoChanged;
+        }
+
         if (InventorySystem.Instance != null)
         {
             InventorySystem.Instance.OnInventoryChanged -= RefreshResources;
         }
+    }
+
+    private void OnAmmoChanged(int current, int max)
+    {
+        if (ammoLabel == null) return;
+        ammoLabel.text = "Ammo: " + current + "/" + max;
     }
 
     public void SetBiome(string biomeName)

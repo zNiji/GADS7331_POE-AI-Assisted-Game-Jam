@@ -170,6 +170,7 @@ MonoBehaviour:
   availableUpgrades: []
   playerStats: {fileID: 0}
   playerUpgradeEffects: {fileID: 0}
+  playerAmmo: {fileID: 0}
 --- !u!114 &1120961725093723356
 MonoBehaviour:
   m_ObjectHideFlags: 0

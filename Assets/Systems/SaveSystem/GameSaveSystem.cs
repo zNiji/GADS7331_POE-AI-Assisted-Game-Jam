@@ -29,6 +29,7 @@ public static class GameSaveSystem
         public Vector3 playerPosition;
         public float playerHealth;
         public float playerOxygen;
+        public int playerAmmo;
 
         public List<IntEntry> inventoryEntries = new List<IntEntry>();
         public List<IntEntry> extractedEntries = new List<IntEntry>();
@@ -123,6 +124,7 @@ public static class GameSaveSystem
         PlayerStats ps = UnityEngine.Object.FindAnyObjectByType<PlayerStats>();
         InventorySystem inv = UnityEngine.Object.FindAnyObjectByType<InventorySystem>();
         ExtractedResourceBank bank = UnityEngine.Object.FindAnyObjectByType<ExtractedResourceBank>();
+        PlayerAmmo ammo = UnityEngine.Object.FindAnyObjectByType<PlayerAmmo>();
 
         if (ps == null)
         {
@@ -136,6 +138,11 @@ public static class GameSaveSystem
         data.playerPosition = ps.transform.position;
         data.playerHealth = ps.CurrentHealth;
         data.playerOxygen = ps.CurrentOxygen;
+
+        if (ammo != null)
+        {
+            data.playerAmmo = ammo.CurrentAmmo;
+        }
 
         if (inv != null)
         {
@@ -209,6 +216,7 @@ public static class GameSaveSystem
             PlayerStats ps = UnityEngine.Object.FindAnyObjectByType<PlayerStats>();
             InventorySystem inv = UnityEngine.Object.FindAnyObjectByType<InventorySystem>();
             ExtractedResourceBank bank = UnityEngine.Object.FindAnyObjectByType<ExtractedResourceBank>();
+            PlayerAmmo ammo = UnityEngine.Object.FindAnyObjectByType<PlayerAmmo>();
 
             if (ps != null)
             {
@@ -222,6 +230,11 @@ public static class GameSaveSystem
                 }
 
                 ps.SetCurrentHealthAndOxygen(data.playerHealth, data.playerOxygen);
+            }
+
+            if (ammo != null)
+            {
+                ammo.SetCurrentAmmoFromSave(data.playerAmmo);
             }
 
             if (inv != null)

@@ -46,6 +46,7 @@ GameObject:
   - component: {fileID: 1385841431819233193}
   - component: {fileID: 1638490639601870944}
   - component: {fileID: 8452570713259099816}
+  - component: {fileID: 6933723812292601490}
   - component: {fileID: 5537948792425023558}
   m_Layer: 0
   m_Name: Player
@@ -248,6 +249,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bonusDamage: 0
   bonusMiningPower: 0
+--- !u!114 &6933723812292601490
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3783761902136598088}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1497f44049a13bd42beb2a6aef52debf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxAmmo: 150
+  startAmmo: 80
 --- !u!114 &5537948792425023558
 MonoBehaviour:
   m_ObjectHideFlags: 0

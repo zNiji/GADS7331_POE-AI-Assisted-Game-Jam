@@ -99,13 +99,22 @@ public static class GenerateCorePrefabs2D
             seed: 404
         );
 
+        // Ammo pickup: small glowing capsule with bullet marks.
+        Sprite ammoPickupSprite = CreateAlienAmmoPickupSprite(
+            "spr_alien_ammo_pickup",
+            fill: new Color(1f, 0.95f, 0.35f),
+            border: new Color(0.9f, 0.65f, 0.15f),
+            seed: 707
+        );
+
         GameObject resourceItemPrefab = CreateResourceItemPrefab(ironItemSprite, crystalItemSprite, uraniumItemSprite);
         GameObject bulletPrefab = CreateBulletPrefab(bulletSprite);
-        // Base enemy prefab: the runtime spawner will swap sprite to flora/fauna/shooter variants.
-        GameObject enemyPrefab = CreateEnemyPrefab(faunaEnemySprite);
         GameObject resourceNodePrefab = CreateResourceNodePrefab(ironNodeSprite, resourceItemPrefab, crystalNodeSprite, uraniumNodeSprite);
         GameObject healthPickupPrefab = CreateHealthPickupPrefab(healthPickupSprite);
         GameObject oxygenPickupPrefab = CreateOxygenPickupPrefab(oxygenPickupSprite);
+        GameObject ammoPickupPrefab = CreateBulletAmmoPickupPrefab(ammoPickupSprite);
+        // Base enemy prefab: the runtime spawner will swap sprite to flora/fauna/shooter variants.
+        GameObject enemyPrefab = CreateEnemyPrefab(faunaEnemySprite, ammoPickupPrefab);
         GameObject rowPrefab = CreateUpgradeRowPrefab();
         GameObject playerPrefab = CreatePlayerPrefab(astronautSprite, bulletPrefab);
         GameObject hudPrefab = CreateHudCanvasPrefab(rowPrefab);
@@ -120,7 +129,7 @@ public static class GenerateCorePrefabs2D
         );
 
         Selection.activeObject = gameSystemsPrefab != null ? gameSystemsPrefab : rowPrefab;
-        Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, HealthPickup, OxygenPickup, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
+        Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, HealthPickup, OxygenPickup, BulletAmmoPickup, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
     }
 
     private static GameObject CreateHealthPickupPrefab(Sprite healthSprite)
@@ -157,6 +166,26 @@ public static class GenerateCorePrefabs2D
         root.AddComponent<OxygenPickup>();
 
         string path = PrefabDir + "/OxygenPickup.prefab";
+        GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
+        Object.DestroyImmediate(root);
+        return prefab;
+    }
+
+    private static GameObject CreateBulletAmmoPickupPrefab(Sprite ammoSprite)
+    {
+        GameObject root = new GameObject("BulletAmmoPickup");
+        SpriteRenderer renderer = root.AddComponent<SpriteRenderer>();
+        renderer.sprite = ammoSprite;
+        renderer.sortingOrder = 1;
+
+        CircleCollider2D col = root.AddComponent<CircleCollider2D>();
+        col.isTrigger = true;
+        // Slightly smaller pickup collider.
+        col.radius = 0.42f;
+
+        root.AddComponent<BulletAmmoPickup>();
+
+        string path = PrefabDir + "/BulletAmmoPickup.prefab";
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, path);
         Object.DestroyImmediate(root);
         return prefab;
@@ -883,7 +912,7 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateEnemyPrefab(Sprite sprite)
+    private static GameObject CreateEnemyPrefab(Sprite sprite, GameObject bulletAmmoPickupPrefab)
     {
         GameObject go = new GameObject("Enemy");
         var renderer = go.AddComponent<SpriteRenderer>();
@@ -916,6 +945,7 @@ public static class GenerateCorePrefabs2D
         aiSO.ApplyModifiedPropertiesWithoutUndo();
 
         SerializedObject healthSO = new SerializedObject(health);
+        healthSO.FindProperty("bulletAmmoPickupPrefab").objectReferenceValue = bulletAmmoPickupPrefab;
         healthSO.ApplyModifiedPropertiesWithoutUndo();
 
         string path = PrefabDir + "/Enemy.prefab";
@@ -1058,6 +1088,7 @@ public static class GenerateCorePrefabs2D
         var movement = go.AddComponent<PlayerMovement2D>();
         var stats = go.AddComponent<PlayerStats>();
         go.AddComponent<PlayerUpgradeEffects>();
+        go.AddComponent<PlayerAmmo>();
         var shooting = go.AddComponent<PlayerShooting>();
 
         Transform groundCheck = new GameObject("GroundCheck").transform;
@@ -1111,6 +1142,13 @@ public static class GenerateCorePrefabs2D
         Slider oxygenSlider = CreateSlider("OxygenSlider", canvasGO.transform, new Vector2(190f, -78f));
         Text suitText = CreateText("SuitLabel", canvasGO.transform, new Vector2(20f, -32f), 18, TextAnchor.MiddleLeft);
         Text oxygenText = CreateText("OxygenLabel", canvasGO.transform, new Vector2(20f, -70f), 18, TextAnchor.MiddleLeft);
+        Text ammoText = CreateText("AmmoLabel", canvasGO.transform, new Vector2(20f, -95f), 18, TextAnchor.UpperRight);
+        // Move ammo readout to bottom-right of the HUD.
+        RectTransform ammoRt = ammoText.GetComponent<RectTransform>();
+        ammoRt.anchorMin = new Vector2(1f, 0f);
+        ammoRt.anchorMax = new Vector2(1f, 0f);
+        ammoRt.pivot = new Vector2(1f, 0f);
+        ammoRt.anchoredPosition = new Vector2(-20f, 20f);
         Text resourcesText = CreateText("ResourcesText", canvasGO.transform, new Vector2(20f, -120f), 18, TextAnchor.UpperLeft);
         Text biomeText = CreateText("BiomeLabel", canvasGO.transform, new Vector2(20f, -250f), 18, TextAnchor.MiddleLeft);
         Text promptText = CreateCenteredText("PromptText", canvasGO.transform, new Vector2(0f, 120f), 22);
@@ -1183,6 +1221,7 @@ public static class GenerateCorePrefabs2D
         hudSO.FindProperty("oxygenSlider").objectReferenceValue = oxygenSlider;
         hudSO.FindProperty("suitIntegrityLabel").objectReferenceValue = suitText;
         hudSO.FindProperty("oxygenLabel").objectReferenceValue = oxygenText;
+        hudSO.FindProperty("ammoLabel").objectReferenceValue = ammoText;
         hudSO.FindProperty("resourcesText").objectReferenceValue = resourcesText;
         hudSO.FindProperty("biomeLabel").objectReferenceValue = biomeText;
         hudSO.FindProperty("promptText").objectReferenceValue = promptText;
@@ -1206,14 +1245,39 @@ public static class GenerateCorePrefabs2D
         deathRoot.SetActive(false);
         Text deathTitle = CreateCenteredText("DeathTitle", deathRoot.transform, new Vector2(0f, 170f), 46);
         deathTitle.text = "Run Failed";
-        Text deathDesc = CreateCenteredText("DeathDescription", deathRoot.transform, new Vector2(0f, 118f), 28);
+        Text deathDesc = CreateCenteredText("DeathDescription", deathRoot.transform, new Vector2(0f, 156f), 28);
         deathDesc.text = "Choose one permanent upgrade before redeploying.";
 
-        Button btnA = CreateMenuButton("OptionAButton", deathRoot.transform, new Vector2(0f, 62f), out Text btnAText);
-        Button btnB = CreateMenuButton("OptionBButton", deathRoot.transform, new Vector2(0f, 2f), out Text btnBText);
-        Button btnC = CreateMenuButton("OptionCButton", deathRoot.transform, new Vector2(0f, -58f), out Text btnCText);
-        Button continueBtn = CreateMenuButton("ContinueButton", deathRoot.transform, new Vector2(0f, -146f), out Text continueText);
+        Button btnA = CreateMenuButton("OptionAButton", deathRoot.transform, new Vector2(0f, 92f), out Text btnAText);
+        Button btnB = CreateMenuButton("OptionBButton", deathRoot.transform, new Vector2(0f, 32f), out Text btnBText);
+        Button btnC = CreateMenuButton("OptionCButton", deathRoot.transform, new Vector2(0f, -28f), out Text btnCText);
+        Button btnD = CreateMenuButton("OptionDButton", deathRoot.transform, new Vector2(0f, -88f), out Text btnDText);
+        Button continueBtn = CreateMenuButton("ContinueButton", deathRoot.transform, new Vector2(0f, -170f), out Text continueText);
         continueText.text = "Continue";
+
+        // Make the option "title" (upgrade name/Lv/cost text) sit higher within each button.
+        // This improves readability with the multi-line label.
+        Vector2 optionLabelLift = new Vector2(0f, 10f);
+        if (btnAText != null)
+        {
+            RectTransform rt = btnAText.GetComponent<RectTransform>();
+            if (rt != null) rt.anchoredPosition = optionLabelLift;
+        }
+        if (btnBText != null)
+        {
+            RectTransform rt = btnBText.GetComponent<RectTransform>();
+            if (rt != null) rt.anchoredPosition = optionLabelLift;
+        }
+        if (btnCText != null)
+        {
+            RectTransform rt = btnCText.GetComponent<RectTransform>();
+            if (rt != null) rt.anchoredPosition = optionLabelLift;
+        }
+        if (btnDText != null)
+        {
+            RectTransform rt = btnDText.GetComponent<RectTransform>();
+            if (rt != null) rt.anchoredPosition = optionLabelLift;
+        }
 
         DeathUpgradeMenuUI deathMenu = canvasGO.GetComponent<DeathUpgradeMenuUI>();
         SerializedObject deathSO = new SerializedObject(deathMenu);
@@ -1223,9 +1287,11 @@ public static class GenerateCorePrefabs2D
         deathSO.FindProperty("optionAButton").objectReferenceValue = btnA;
         deathSO.FindProperty("optionBButton").objectReferenceValue = btnB;
         deathSO.FindProperty("optionCButton").objectReferenceValue = btnC;
+        deathSO.FindProperty("optionDButton").objectReferenceValue = btnD;
         deathSO.FindProperty("optionALabel").objectReferenceValue = btnAText;
         deathSO.FindProperty("optionBLabel").objectReferenceValue = btnBText;
         deathSO.FindProperty("optionCLabel").objectReferenceValue = btnCText;
+        deathSO.FindProperty("optionDLabel").objectReferenceValue = btnDText;
         deathSO.FindProperty("continueButton").objectReferenceValue = continueBtn;
         deathSO.ApplyModifiedPropertiesWithoutUndo();
 
@@ -1796,6 +1862,38 @@ public static class GenerateCorePrefabs2D
         return loaded != null ? loaded : CreateFallbackSprite(name, fill, border);
     }
 
+    private static Sprite CreateAlienAmmoPickupSprite(string name, Color fill, Color border, int seed)
+    {
+        // Ammo icon: circular border with a glowing inner fill and simple “bullet marks”.
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteAlienAmmoPickupPng(fullPath, 16, fill, border, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, fill, border);
+    }
+
     private static Sprite CreateAlienBackgroundSprite(string name, int seed)
     {
         // Larger resolution -> fewer artifacts when scaled up.
@@ -2260,6 +2358,70 @@ public static class GenerateCorePrefabs2D
                 if (highlight)
                 {
                     c = Color.Lerp(fill, Color.white, 0.35f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteAlienAmmoPickupPng(string fullPath, int size, Color fill, Color border, int seed)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float innerRadius = (size * 0.32f);
+        float outerRadius = (size * 0.40f);
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+
+        int mid = size / 2;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center.x;
+                float dy = y - center.y;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                if (dist > outerRadius)
+                {
+                    tex.SetPixel(x, y, transparent);
+                    continue;
+                }
+
+                if (dist > innerRadius)
+                {
+                    tex.SetPixel(x, y, border);
+                    continue;
+                }
+
+                // Inner fill with subtle glow.
+                Color c = fill;
+
+                // Bullet marks: draw a tiny “two bullets” cluster in the middle.
+                // Primary bullet shaft (slightly curved-looking via pixels).
+                bool inBullet =
+                    (y >= mid - 1 && y <= mid + 1 && x >= mid - 3 && x <= mid + 1) ||
+                    (y >= mid - 2 && y <= mid + 2 && x == mid - 2) ||
+                    (y >= mid - 2 && y <= mid + 2 && x == mid - 1);
+
+                if (inBullet)
+                {
+                    c = Color.Lerp(fill, Color.white, 0.35f);
+                }
+
+                // Accent sparkles for visual interest.
+                float h = Hash01(x, y, seed + 123);
+                if (h < 0.05f)
+                {
+                    c = Color.Lerp(c, Color.white, 0.65f);
                 }
 
                 tex.SetPixel(x, y, c);

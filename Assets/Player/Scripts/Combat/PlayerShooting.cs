@@ -18,10 +18,12 @@ public class PlayerShooting : MonoBehaviour
 
     private float nextShotTime;
     private PlayerUpgradeEffects upgradeEffects;
+    private PlayerAmmo ammo;
 
     private void Awake()
     {
         upgradeEffects = GetComponentInParent<PlayerUpgradeEffects>();
+        ammo = GetComponentInParent<PlayerAmmo>();
 
         if (playerSprite == null)
         {
@@ -45,6 +47,12 @@ public class PlayerShooting : MonoBehaviour
         }
 
         if (Time.time < nextShotTime)
+        {
+            return;
+        }
+
+        // Limited ammo: spend 1 per shot.
+        if (ammo != null && !ammo.TrySpendAmmo(1))
         {
             return;
         }
