@@ -24,24 +24,100 @@ public static class GenerateCorePrefabs2D
         EnsureDir(PrefabDir);
         EnsureDir(PrefabDir + "/UI");
 
-        Sprite bulletSprite = CreatePixelSprite("spr_bullet", new Color(1f, 0.95f, 0.35f), new Color(0.9f, 0.65f, 0.15f));
-        Sprite enemySprite = CreatePixelSprite("spr_enemy", new Color(0.8f, 0.25f, 0.25f), new Color(0.35f, 0.08f, 0.08f));
-        Sprite nodeSprite = CreatePixelSprite("spr_resource_node", new Color(0.35f, 0.75f, 0.85f), new Color(0.15f, 0.35f, 0.45f));
-        Sprite itemSprite = CreatePixelSprite("spr_resource_item", new Color(0.6f, 1f, 0.75f), new Color(0.2f, 0.45f, 0.25f));
-        Sprite healthPickupSprite = CreatePixelSprite("spr_health_pickup", new Color(0.35f, 1f, 0.55f), new Color(0.12f, 0.35f, 0.22f));
-        // Oxygen icon is intentionally different (transparent outside, circular) so it doesn't look like resource nodes.
-        Sprite oxygenPickupSprite = CreateOxygenPixelSprite("spr_oxygen_pickup", new Color(0.55f, 0.95f, 1f), new Color(0.12f, 0.35f, 0.55f));
+        // Cylindrical/pill bullet to better read in motion.
+        Sprite bulletSprite = CreateCylindricalBulletSprite("spr_bullet", seed: 55);
 
-        GameObject resourceItemPrefab = CreateResourceItemPrefab(itemSprite);
+        // Player + enemies (pixel-art, procedural).
+        Sprite astronautSprite = CreateAstronautSprite("spr_astronaut_player", seed: 11);
+        Sprite floraEnemySprite = CreateFloraEnemySprite("spr_alien_flora_enemy", seed: 21);
+        Sprite faunaEnemySprite = CreateFaunaEnemySprite("spr_alien_fauna_enemy", seed: 31);
+        Sprite shooterAlienSprite = CreateAlienShooterEnemySprite("spr_alien_shooter_enemy", seed: 41);
+        // Alien tile sprites (pixel-art, procedural, deterministic).
+        // Different ore types so Iron/Crystal/Uranium look distinct.
+        Sprite ironNodeSprite = CreateAlienTileSprite(
+            "spr_alien_ore_iron_node",
+            baseFill: new Color(0.18f, 0.75f, 0.95f),
+            borderColor: new Color(0.08f, 0.28f, 0.45f),
+            accentColor: new Color(0.75f, 1f, 0.45f),
+            accentChance01: 0.12f,
+            seed: 101
+        );
+        Sprite crystalNodeSprite = CreateAlienTileSprite(
+            "spr_alien_ore_crystal_node",
+            baseFill: new Color(0.35f, 0.85f, 1f),
+            borderColor: new Color(0.10f, 0.35f, 0.55f),
+            accentColor: new Color(1f, 0.55f, 0.9f),
+            accentChance01: 0.10f,
+            seed: 202
+        );
+        Sprite uraniumNodeSprite = CreateAlienTileSprite(
+            "spr_alien_ore_uranium_node",
+            baseFill: new Color(0.75f, 0.35f, 1f),
+            borderColor: new Color(0.35f, 0.08f, 0.55f),
+            accentColor: new Color(0.55f, 1f, 0.7f),
+            accentChance01: 0.11f,
+            seed: 303
+        );
+
+        Sprite ironItemSprite = CreateAlienTileSprite(
+            "spr_alien_ore_iron_item",
+            baseFill: new Color(0.45f, 1f, 0.75f),
+            borderColor: new Color(0.18f, 0.35f, 0.18f),
+            accentColor: new Color(0.95f, 0.55f, 0.25f),
+            accentChance01: 0.08f,
+            seed: 404
+        );
+        Sprite crystalItemSprite = CreateAlienTileSprite(
+            "spr_alien_ore_crystal_item",
+            baseFill: new Color(0.65f, 0.95f, 1f),
+            borderColor: new Color(0.15f, 0.35f, 0.55f),
+            accentColor: new Color(1f, 0.7f, 0.25f),
+            accentChance01: 0.08f,
+            seed: 505
+        );
+        Sprite uraniumItemSprite = CreateAlienTileSprite(
+            "spr_alien_ore_uranium_item",
+            baseFill: new Color(0.95f, 0.6f, 1f),
+            borderColor: new Color(0.35f, 0.08f, 0.55f),
+            accentColor: new Color(0.25f, 1f, 0.6f),
+            accentChance01: 0.08f,
+            seed: 606
+        );
+        Sprite healthPickupSprite = CreateAlienHealthPickupSprite(
+            "spr_alien_health_pickup",
+            // Match flora enemy body color (neon green).
+            fill: new Color(0.18f, 1f, 0.55f),
+            border: new Color(0.05f, 0.35f, 0.2f),
+            cross: new Color(0.22f, 1f, 0.6f),
+            seed: 303
+        );
+        // Oxygen icon is intentionally different (transparent outside, circular) so it doesn't look like resource nodes.
+        Sprite oxygenPickupSprite = CreateAlienOxygenPickupSprite(
+            "spr_alien_oxygen_pickup",
+            fill: new Color(0.55f, 0.95f, 1f),
+            border: new Color(0.12f, 0.35f, 0.55f),
+            seed: 404
+        );
+
+        GameObject resourceItemPrefab = CreateResourceItemPrefab(ironItemSprite, crystalItemSprite, uraniumItemSprite);
         GameObject bulletPrefab = CreateBulletPrefab(bulletSprite);
-        GameObject enemyPrefab = CreateEnemyPrefab(enemySprite);
-        GameObject resourceNodePrefab = CreateResourceNodePrefab(nodeSprite, resourceItemPrefab);
+        // Base enemy prefab: the runtime spawner will swap sprite to flora/fauna/shooter variants.
+        GameObject enemyPrefab = CreateEnemyPrefab(faunaEnemySprite);
+        GameObject resourceNodePrefab = CreateResourceNodePrefab(ironNodeSprite, resourceItemPrefab, crystalNodeSprite, uraniumNodeSprite);
         GameObject healthPickupPrefab = CreateHealthPickupPrefab(healthPickupSprite);
         GameObject oxygenPickupPrefab = CreateOxygenPickupPrefab(oxygenPickupSprite);
         GameObject rowPrefab = CreateUpgradeRowPrefab();
-        GameObject playerPrefab = CreatePlayerPrefab(CreatePixelSprite("spr_player", new Color(0.4f, 0.8f, 1f), new Color(0.12f, 0.22f, 0.35f)), bulletPrefab);
+        GameObject playerPrefab = CreatePlayerPrefab(astronautSprite, bulletPrefab);
         GameObject hudPrefab = CreateHudCanvasPrefab(rowPrefab);
-        GameObject gameSystemsPrefab = CreateGameSystemsPrefab(enemyPrefab, resourceNodePrefab, bulletPrefab, oxygenPickupPrefab);
+        GameObject gameSystemsPrefab = CreateGameSystemsPrefab(
+            enemyPrefab,
+            resourceNodePrefab,
+            bulletPrefab,
+            oxygenPickupPrefab,
+            floraEnemySprite,
+            faunaEnemySprite,
+            shooterAlienSprite
+        );
 
         Selection.activeObject = gameSystemsPrefab != null ? gameSystemsPrefab : rowPrefab;
         Debug.Log("Core prefabs generated: Bullet, Enemy, ResourceNode, ResourceItem, HealthPickup, OxygenPickup, UpgradeOptionRowUI, Player, HUDCanvas, GameSystems.");
@@ -243,9 +319,40 @@ public static class GenerateCorePrefabs2D
         ClearChildren(geometryRoot);
         ClearChildren(spawnPointsRoot);
 
-        Sprite groundSprite = CreatePixelSprite("spr_ground_block", new Color(0.56f, 0.56f, 0.64f), new Color(0.26f, 0.26f, 0.34f));
+        Sprite groundSprite = CreateAlienSquareTileSprite(
+            "spr_alien_ground_block",
+            baseFill: new Color(0.10f, 0.12f, 0.18f),
+            borderColor: new Color(0.03f, 0.05f, 0.08f),
+            accentColor: new Color(0.25f, 1f, 0.65f),
+            accentChance01: 0.10f,
+            seed: 505
+        );
         BuildGroundIfMissing(geometryRoot, groundSprite);
         BuildPlatformsIfMissing(geometryRoot, groundSprite);
+
+        // World/scene background behind the generated level (alien planet).
+        Transform existingBg = levelRoot.transform.Find("LevelBackground");
+        if (existingBg != null)
+        {
+            Object.DestroyImmediate(existingBg.gameObject);
+        }
+
+        Sprite bgSprite = CreateAlienBackgroundSprite("spr_alien_background", seed: 707);
+        GameObject bgGO = new GameObject("LevelBackground", typeof(SpriteRenderer));
+        bgGO.transform.SetParent(levelRoot.transform, false);
+        SpriteRenderer bgSR = bgGO.GetComponent<SpriteRenderer>();
+        bgSR.sprite = bgSprite;
+        bgSR.sortingOrder = -50; // keep definitely behind ground blocks
+        bgSR.color = Color.white;
+        // Put it in the same Z-plane as gameplay so the camera definitely draws it.
+        bgGO.transform.position = new Vector3(0f, 0f, 0f);
+        // Scale to cover the typical visible area + wider generated map.
+        // spr size is ~4x4 units (64px / 16ppu), so this gives a big starfield.
+        // Make it tall enough for the expanded generated level height.
+        bgGO.transform.localScale = new Vector3(75f, 40f, 1f);
+        string bgName = bgSprite != null ? bgSprite.name : "null";
+        Debug.Log($"[CreatePlayableTestLevel] Background sprite: {bgName}, sortingOrder: {bgSR.sortingOrder}");
+
         BuildSpawnPointsIfMissing(spawnPointsRoot);
         SnapSpawnPointsToGround(spawnPointsRoot);
 
@@ -746,11 +853,11 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateResourceItemPrefab(Sprite sprite)
+    private static GameObject CreateResourceItemPrefab(Sprite ironSprite, Sprite crystalSprite, Sprite uraniumSprite)
     {
         GameObject go = new GameObject("ResourceItem");
         var renderer = go.AddComponent<SpriteRenderer>();
-        renderer.sprite = sprite;
+        renderer.sprite = ironSprite;
         renderer.sortingOrder = 4;
         ApplyVisibleSpriteMaterial(renderer);
 
@@ -759,6 +866,15 @@ public static class GenerateCorePrefabs2D
         col.radius = 0.3f;
 
         go.AddComponent<ResourceItem>();
+        ResourceItem item = go.GetComponent<ResourceItem>();
+        if (item != null)
+        {
+            SerializedObject itemSO = new SerializedObject(item);
+            itemSO.FindProperty("ironItemSprite").objectReferenceValue = ironSprite;
+            itemSO.FindProperty("crystalItemSprite").objectReferenceValue = crystalSprite;
+            itemSO.FindProperty("uraniumItemSprite").objectReferenceValue = uraniumSprite;
+            itemSO.ApplyModifiedPropertiesWithoutUndo();
+        }
 
         string path = PrefabDir + "/ResourceItem.prefab";
         GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
@@ -766,11 +882,11 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateResourceNodePrefab(Sprite sprite, GameObject resourceItemPrefab)
+    private static GameObject CreateResourceNodePrefab(Sprite ironNodeSprite, GameObject resourceItemPrefab, Sprite crystalNodeSprite, Sprite uraniumNodeSprite)
     {
         GameObject go = new GameObject("ResourceNode");
         var renderer = go.AddComponent<SpriteRenderer>();
-        renderer.sprite = sprite;
+        renderer.sprite = ironNodeSprite;
         renderer.sortingOrder = 2;
         ApplyVisibleSpriteMaterial(renderer);
 
@@ -784,6 +900,9 @@ public static class GenerateCorePrefabs2D
         nodeSO.FindProperty("resourceDropPrefab").objectReferenceValue = resourceItemPrefab != null
             ? resourceItemPrefab.GetComponent<ResourceItem>()
             : null;
+        nodeSO.FindProperty("ironNodeSprite").objectReferenceValue = ironNodeSprite;
+        nodeSO.FindProperty("crystalNodeSprite").objectReferenceValue = crystalNodeSprite;
+        nodeSO.FindProperty("uraniumNodeSprite").objectReferenceValue = uraniumNodeSprite;
         nodeSO.ApplyModifiedPropertiesWithoutUndo();
 
         string path = PrefabDir + "/ResourceNode.prefab";
@@ -1045,7 +1164,14 @@ public static class GenerateCorePrefabs2D
         return prefab;
     }
 
-    private static GameObject CreateGameSystemsPrefab(GameObject enemyPrefab, GameObject resourceNodePrefab, GameObject bulletPrefab, GameObject oxygenPickupPrefab)
+    private static GameObject CreateGameSystemsPrefab(
+        GameObject enemyPrefab,
+        GameObject resourceNodePrefab,
+        GameObject bulletPrefab,
+        GameObject oxygenPickupPrefab,
+        Sprite floraEnemySprite,
+        Sprite faunaEnemySprite,
+        Sprite shooterAlienSprite)
     {
         GameObject root = new GameObject("GameSystems");
         GameManager gameManager = root.AddComponent<GameManager>();
@@ -1072,6 +1198,9 @@ public static class GenerateCorePrefabs2D
         spawnerSO.FindProperty("resourceNodePrefab").objectReferenceValue = resourceNodePrefab;
         spawnerSO.FindProperty("bulletPrefab").objectReferenceValue = bulletPrefab;
         spawnerSO.FindProperty("oxygenPickupPrefab").objectReferenceValue = oxygenPickupPrefab;
+        spawnerSO.FindProperty("floraEnemySprite").objectReferenceValue = floraEnemySprite;
+        spawnerSO.FindProperty("faunaEnemySprite").objectReferenceValue = faunaEnemySprite;
+        spawnerSO.FindProperty("shooterEnemySprite").objectReferenceValue = shooterAlienSprite;
         spawnerSO.FindProperty("spawnedEnemiesRoot").objectReferenceValue = enemiesRoot;
         spawnerSO.FindProperty("spawnedResourcesRoot").objectReferenceValue = resourcesRoot;
         spawnerSO.ApplyModifiedPropertiesWithoutUndo();
@@ -1310,6 +1439,163 @@ public static class GenerateCorePrefabs2D
         return CreateFallbackSprite(name, fill, border);
     }
 
+    private static Sprite CreateAstronautSprite(string name, int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Always write the sprite so you can iterate on the look.
+        WriteAstronautPlayerPng(fullPath, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.4f, 0.8f, 1f), new Color(0.12f, 0.22f, 0.35f));
+    }
+
+    private static Sprite CreateCylindricalBulletSprite(string name, int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Always overwrite to iterate quickly.
+        WriteCylindricalBulletPng(fullPath, 16, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(1f, 0.95f, 0.35f), new Color(0.9f, 0.65f, 0.15f));
+    }
+
+    private static Sprite CreateFloraEnemySprite(string name, int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteFloraEnemyPng(fullPath, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.25f, 1f, 0.55f), new Color(0.06f, 0.25f, 0.1f));
+    }
+
+    private static Sprite CreateFaunaEnemySprite(string name, int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteFaunaEnemyPng(fullPath, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.95f, 0.7f, 0.25f), new Color(0.3f, 0.12f, 0.06f));
+    }
+
+    private static Sprite CreateAlienShooterEnemySprite(string name, int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteAlienShooterEnemyPng(fullPath, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.6f, 0.9f, 1f), new Color(0.15f, 0.2f, 0.35f));
+    }
+
     private static void EnsureDir(string path)
     {
         if (!AssetDatabase.IsValidFolder(path))
@@ -1321,6 +1607,591 @@ public static class GenerateCorePrefabs2D
                 AssetDatabase.CreateFolder(parent, child);
             }
         }
+    }
+
+    private static float Hash01(int x, int y, int seed)
+    {
+        // Deterministic integer hash -> [0..1)
+        int h = x * 73856093 ^ y * 19349663 ^ seed * 83492791;
+        h = (h ^ (h >> 13)) * 1274126177;
+        uint uh = (uint)(h & 0x7fffffff);
+        return uh / (float)0x7fffffff;
+    }
+
+    private static Sprite CreateAlienTileSprite(
+        string name,
+        Color baseFill,
+        Color borderColor,
+        Color accentColor,
+        float accentChance01,
+        int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Always overwrite so you can iterate on art style.
+        WriteAlienTilePng(fullPath, 16, baseFill, borderColor, accentColor, accentChance01, seed, drawCross: false);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, baseFill, borderColor);
+    }
+
+    private static Sprite CreateAlienHealthPickupSprite(
+        string name,
+        Color fill,
+        Color border,
+        Color cross,
+        int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Cross-only (transparent outside) so it's not a "square with a cross".
+        WriteAlienHealthCrossPng(fullPath, 16, fill, border, cross, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, fill, border);
+    }
+
+    private static Sprite CreateAlienOxygenPickupSprite(string name, Color fill, Color border, int seed)
+    {
+        // Oxygen stays circular and transparent outside.
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteAlienOxygenPixelPng(fullPath, 16, fill, border, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, fill, border);
+    }
+
+    private static Sprite CreateAlienBackgroundSprite(string name, int seed)
+    {
+        // Larger resolution -> fewer artifacts when scaled up.
+        int w = 128;
+        int h = 72;
+
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteAlienBackgroundPng(fullPath, w, h, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.1f, 0.1f, 0.2f), new Color(0.05f, 0.05f, 0.1f));
+    }
+
+    private static Sprite CreateAlienSquareTileSprite(
+        string name,
+        Color baseFill,
+        Color borderColor,
+        Color accentColor,
+        float accentChance01,
+        int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Always overwrite so you can iterate on the square-block look.
+        WriteAlienSquareTilePng(fullPath, 16, baseFill, borderColor, accentColor, accentChance01, seed, drawCross: false);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, baseFill, borderColor);
+    }
+
+    private static void WriteAlienTilePng(
+        string fullPath,
+        int size,
+        Color baseFill,
+        Color borderColor,
+        Color accentColor,
+        float accentChance01,
+        int seed,
+        bool drawCross)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+
+        // Crystal-like ore: union of a few deterministic shard triangles + facet lines.
+        int cx = size / 2;
+        int yBase = size - 1;
+        int mid = size / 2;
+
+        // Seed-derived shard vertices (bigger/more blocky facets).
+        int tA = 1 + Mathf.FloorToInt(Hash01(0, 0, seed) * 7f); // 1..7
+        int tB = 0 + Mathf.FloorToInt(Hash01(9, 2, seed) * 8f); // 0..7
+        int tC = 2 + Mathf.FloorToInt(Hash01(4, 7, seed) * 7f); // 2..8
+
+        int xA = cx - 7 + Mathf.FloorToInt(Hash01(2, 3, seed) * 4f); // cx-7..cx-4
+        int xB = cx - 2 + Mathf.FloorToInt(Hash01(7, 5, seed) * 6f); // cx-2..cx+3
+        int xC = cx + 1 + Mathf.FloorToInt(Hash01(1, 8, seed) * 7f); // cx+1..cx+8
+
+        // Quantize to a 2px grid to make the silhouette feel "blocky".
+        tA = Mathf.Clamp(Mathf.RoundToInt(tA / 2f) * 2, 0, size - 1);
+        tB = Mathf.Clamp(Mathf.RoundToInt(tB / 2f) * 2, 0, size - 1);
+        tC = Mathf.Clamp(Mathf.RoundToInt(tC / 2f) * 2, 0, size - 1);
+        xA = Mathf.Clamp(Mathf.RoundToInt(xA / 2f) * 2, 0, size - 1);
+        xB = Mathf.Clamp(Mathf.RoundToInt(xB / 2f) * 2, 0, size - 1);
+        xC = Mathf.Clamp(Mathf.RoundToInt(xC / 2f) * 2, 0, size - 1);
+
+        // Base edges (bigger caps = less thin tops).
+        Vector2Int a0 = new Vector2Int(cx - 8, yBase);
+        Vector2Int a1 = new Vector2Int(xA, tA);
+        Vector2Int a2 = new Vector2Int(cx - 1, yBase);
+
+        Vector2Int b0 = new Vector2Int(cx - 4, yBase);
+        Vector2Int b1 = new Vector2Int(xB, tB);
+        Vector2Int b2 = new Vector2Int(cx + 3, yBase);
+
+        Vector2Int c0 = new Vector2Int(cx - 1, yBase);
+        Vector2Int c1 = new Vector2Int(xC, tC);
+        Vector2Int c2 = new Vector2Int(cx + 8, yBase);
+
+        // Helper: point-in-triangle (barycentric sign method).
+        bool InTri(int px, int py, Vector2Int p0, Vector2Int p1, Vector2Int p2)
+        {
+            float x = px;
+            float y = py;
+            float x0 = p0.x; float y0 = p0.y;
+            float x1 = p1.x; float y1 = p1.y;
+            float x2 = p2.x; float y2 = p2.y;
+
+            float denom = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
+            if (Mathf.Abs(denom) < 0.0001f) return false;
+
+            float a = ((y1 - y2) * (x - x2) + (x2 - x1) * (y - y2)) / denom;
+            float b = ((y2 - y0) * (x - x2) + (x0 - x2) * (y - y2)) / denom;
+            float d = 1f - a - b;
+
+            return a >= 0f && b >= 0f && d >= 0f;
+        }
+
+        // Helper: near a line segment (facet ridge).
+        bool NearEdge(int px, int py, Vector2Int p0, Vector2Int p1)
+        {
+            // Distance from point to infinite line using cross product magnitude.
+            float x0 = p0.x; float y0 = p0.y;
+            float x1 = p1.x; float y1 = p1.y;
+            float dx = x1 - x0;
+            float dy = y1 - y0;
+            if (Mathf.Abs(dx) < 0.0001f && Mathf.Abs(dy) < 0.0001f) return false;
+
+            float num = Mathf.Abs(dy * px - dx * py + x1 * y0 - y1 * x0);
+            float den = Mathf.Sqrt(dx * dx + dy * dy);
+            float dist = num / Mathf.Max(0.0001f, den);
+
+            // Only consider pixels that project onto the segment.
+            float t = ((px - x0) * dx + (py - y0) * dy) / Mathf.Max(0.0001f, dx * dx + dy * dy);
+            if (t < -0.1f || t > 1.1f) return false;
+
+            return dist <= 0.6f;
+        }
+
+        bool InOreRaw(int px, int py)
+        {
+            return
+                InTri(px, py, a0, a1, a2) ||
+                InTri(px, py, b0, b1, b2) ||
+                InTri(px, py, c0, c1, c2);
+        }
+
+        // Top rounding: if we're in the top band, dilate slightly so the cap feels thicker/rounded.
+        bool InOre(int px, int py)
+        {
+            if (px < 0 || px >= size || py < 0 || py >= size) return false;
+
+            if (InOreRaw(px, py)) return true;
+
+            int topRows = 4;
+            if (py >= (size - topRows))
+            {
+                if (InOreRaw(px - 1, py)) return true;
+                if (InOreRaw(px + 1, py)) return true;
+                if (InOreRaw(px, py - 1)) return true;
+                if (InOreRaw(px, py + 1)) return true;
+            }
+
+            return false;
+        }
+
+        // Raster (evaluate in flipped Y-space so shards point the right way).
+        for (int y = 0; y < size; y++)
+        {
+            int yEval = size - 1 - y;
+            for (int x = 0; x < size; x++)
+            {
+                if (!InOre(x, yEval))
+                {
+                    tex.SetPixel(x, y, transparent);
+                    continue;
+                }
+
+                // Silhouette border (use flipped-space for inside/outside checks).
+                bool isBorder = false;
+
+                // 4-neighborhood gives crisp borders.
+                if (!InOre(x - 1, yEval) || !InOre(x + 1, yEval) || !InOre(x, yEval - 1) || !InOre(x, yEval + 1))
+                {
+                    if (x > 0 && x < size - 1 && y > 0 && y < size - 1)
+                    {
+                        isBorder = true;
+                    }
+                }
+
+                // Always border on the sprite edges.
+                if (x == 0 || x == size - 1 || y == 0 || y == size - 1)
+                {
+                    isBorder = true;
+                }
+
+                Color c = isBorder ? borderColor : baseFill;
+
+                if (!isBorder)
+                {
+                    // Facet ridges: edges of shards (also evaluated in flipped space).
+                    bool ridge =
+                        NearEdge(x, yEval, a1, a2) ||
+                        NearEdge(x, yEval, a0, a1) ||
+                        NearEdge(x, yEval, b1, b2) ||
+                        NearEdge(x, yEval, b0, b1) ||
+                        NearEdge(x, yEval, c1, c2) ||
+                        NearEdge(x, yEval, c0, c1);
+
+                    if (ridge)
+                    {
+                        c = Color.Lerp(c, borderColor, 0.75f);
+                    }
+                    else
+                    {
+                        // Highlights on some facets (deterministic).
+                        float h = Hash01(x, yEval, seed + 222);
+                        float sheen = (x + yEval) % 5 == 0 ? 1f : 0f;
+                        if (h < accentChance01 || sheen > 0f)
+                        {
+                            c = Color.Lerp(c, accentColor, 0.55f + 0.25f * sheen);
+                        }
+                    }
+
+                    // Optional plus sign for health pickup (kept in sprite-space).
+                    if (drawCross)
+                    {
+                        bool crossPixel = x == mid || y == mid || x == mid - 1 || y == mid - 1;
+                        if (crossPixel) c = Color.Lerp(c, accentColor, 0.85f);
+                    }
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    // Square-block variant used for ground/platform so it stays crisp and non-organic.
+    private static void WriteAlienSquareTilePng(
+        string fullPath,
+        int size,
+        Color baseFill,
+        Color borderColor,
+        Color accentColor,
+        float accentChance01,
+        int seed,
+        bool drawCross)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        int mid = size / 2;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                bool border = x <= 1 || x >= size - 2 || y <= 1 || y >= size - 2;
+                Color c = border ? borderColor : baseFill;
+
+                if (!border)
+                {
+                    // Accent speckles
+                    float h = Hash01(x, y, seed);
+                    if (h < accentChance01)
+                    {
+                        float strength = 0.5f + Hash01(x + 17, y + 9, seed + 11) * 0.5f;
+                        c = Color.Lerp(c, accentColor, strength);
+                    }
+
+                    // Subtle “crack/vein” diagonal lines
+                    int diag = x - y;
+                    if (Mathf.Abs(diag - (mid - 2)) <= 0 || Mathf.Abs(diag - (mid + 1)) <= 0)
+                    {
+                        float veinH = Hash01(x + 3, y + 7, seed + 99);
+                        if (veinH < 0.55f)
+                        {
+                            c = Color.Lerp(c, accentColor, 0.6f);
+                        }
+                    }
+
+                    // Optional plus sign for health pickup
+                    if (drawCross)
+                    {
+                        bool crossPixel = x == mid || y == mid || x == mid - 1 || y == mid - 1;
+                        if (crossPixel)
+                        {
+                            c = Color.Lerp(c, accentColor, 0.85f);
+                        }
+                    }
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteAlienOxygenPixelPng(string fullPath, int size, Color fill, Color border, int seed)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Vector2 center = new Vector2((size - 1) * 0.5f, (size - 1) * 0.5f);
+        float innerRadius = 5.0f;
+        float outerRadius = 7.0f;
+
+        // Seed chooses highlight pattern.
+        int mode = Mathf.Abs(seed) % 3;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - center.x;
+                float dy = y - center.y;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+
+                if (dist > outerRadius)
+                {
+                    tex.SetPixel(x, y, new Color(0f, 0f, 0f, 0f));
+                    continue;
+                }
+
+                if (dist > innerRadius)
+                {
+                    tex.SetPixel(x, y, border);
+                    continue;
+                }
+
+                // Inner fill + highlight accents.
+                Color c = fill;
+                bool highlight = false;
+                if (mode == 0)
+                {
+                    highlight = Mathf.Abs(dx) <= 1.0f || Mathf.Abs(dy) <= 1.0f; // plus
+                }
+                else if (mode == 1)
+                {
+                    highlight = (x == y) || (x + y == size - 1); // X
+                }
+                else
+                {
+                    highlight = (x == midValue(size)) || (y == midValue(size)); // thick cross
+                    if (!highlight)
+                    {
+                        float h = Hash01(x, y, seed);
+                        highlight = h < 0.08f;
+                    }
+                }
+
+                if (highlight)
+                {
+                    c = Color.Lerp(fill, Color.white, 0.35f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static int midValue(int size)
+    {
+        return size / 2;
+    }
+
+    private static void WriteAlienBackgroundPng(string fullPath, int width, int height, int seed)
+    {
+        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color baseCol = new Color(0.02f, 0.02f, 0.07f, 1f);
+        Color hazeA = new Color(0.15f, 0.60f, 0.35f, 1f);
+        Color hazeB = new Color(0.55f, 0.25f, 0.75f, 1f);
+
+        // Pre-picked blob centers (deterministic).
+        Vector2[] centers = new Vector2[]
+        {
+            new Vector2(width * 0.22f, height * 0.35f),
+            new Vector2(width * 0.68f, height * 0.25f),
+            new Vector2(width * 0.58f, height * 0.78f),
+        };
+        float[] sigmas = new float[] { width * 0.22f, width * 0.18f, width * 0.25f };
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float px = x;
+                float py = y;
+
+                // Haze blobs
+                float blob0 = Mathf.Exp(-((px - centers[0].x) * (px - centers[0].x) + (py - centers[0].y) * (py - centers[0].y)) / (2f * sigmas[0] * sigmas[0]));
+                float blob1 = Mathf.Exp(-((px - centers[1].x) * (px - centers[1].x) + (py - centers[1].y) * (py - centers[1].y)) / (2f * sigmas[1] * sigmas[1]));
+                float blob2 = Mathf.Exp(-((px - centers[2].x) * (px - centers[2].x) + (py - centers[2].y) * (py - centers[2].y)) / (2f * sigmas[2] * sigmas[2]));
+
+                float haze = Mathf.Clamp01(blob0 * 0.85f + blob1 * 0.75f + blob2 * 0.65f);
+                Color hazeCol = Color.Lerp(hazeA, hazeB, blob1 / Mathf.Max(0.0001f, blob0 + blob1));
+
+                // Starfield: sparse bright dots.
+                float h = Hash01(x, y, seed);
+                float star = 0f;
+                if (h < 0.010f)
+                {
+                    float sizeRoll = Hash01(x + 11, y + 31, seed + 99);
+                    star = sizeRoll < 0.08f ? 1f : 0.7f;
+                    // Slight chroma
+                    float chroma = Hash01(x + 7, y + 13, seed + 7);
+                    hazeCol = Color.Lerp(hazeCol, Color.white, chroma * 0.8f);
+                }
+
+                Color c = baseCol;
+                c = Color.Lerp(c, hazeCol, haze * 0.65f);
+                c += star * 0.9f * Color.white;
+
+                // Clamp
+                c.r = Mathf.Clamp01(c.r);
+                c.g = Mathf.Clamp01(c.g);
+                c.b = Mathf.Clamp01(c.b);
+                c.a = 1f;
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
     }
 
     private static void EnsureTag(string tagName)
@@ -1397,6 +2268,524 @@ public static class GenerateCorePrefabs2D
                 if (highlight)
                 {
                     c = Color.Lerp(fill, Color.white, 0.35f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteAlienHealthCrossPng(string fullPath, int size, Color fill, Color border, Color cross, int seed)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+
+        // Pixel-art cross centered in the 16x16 tile.
+        int mid = size / 2; // 8
+        int coreMin = mid - 1; // 7
+        int coreMax = mid;     // 8
+        int barStart = 2;
+        int barEnd = size - 3; // 13
+
+        // Border thickness is one pixel larger than core.
+        int borderMin = mid - 2; // 6
+        int borderMax = mid + 1; // 9
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color c = transparent;
+
+                // Core cross (thicker center).
+                bool inCore =
+                    ((x >= coreMin && x <= coreMax) && (y >= barStart && y <= barEnd)) ||
+                    ((y >= coreMin && y <= coreMax) && (x >= barStart && x <= barEnd));
+
+                // Outer cross border (still cross-only, not a square tile).
+                bool inBorder =
+                    ((x >= borderMin && x <= borderMax) && (y >= barStart && y <= barEnd)) ||
+                    ((y >= borderMin && y <= borderMax) && (x >= barStart && x <= barEnd));
+
+                if (inCore)
+                {
+                    c = cross;
+                    // A tiny alien glow sparkle.
+                    float h = Hash01(x, y, seed + 505);
+                    if (h < 0.03f) c = Color.Lerp(c, Color.white, 0.25f);
+                }
+                else if (inBorder)
+                {
+                    c = border;
+                    // Subtle inner tint using `fill` so the cross doesn't look too flat.
+                    float h = Hash01(x, y, seed + 777);
+                    if (h < 0.05f) c = Color.Lerp(c, fill, 0.25f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteCylindricalBulletPng(string fullPath, int size, int seed)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+
+        Color body = new Color(1f, 0.95f, 0.35f, 1f);
+        Color bodyShadow = new Color(0.8f, 0.65f, 0.18f, 1f);
+        Color border = new Color(0.9f, 0.65f, 0.15f, 1f);
+        Color highlight = new Color(1f, 1f, 0.85f, 1f);
+
+        // Horizontally stretched capsule (bullet points to the right by default).
+        float cx = (size - 1) * 0.5f; // 7.5
+        float cy = (size - 1) * 0.5f; // 7.5
+        float a = 6.6f; // horizontal radius
+        float b = 2.5f; // vertical radius
+
+        // Border thickness in "eq" space.
+        float innerEq = 0.86f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = x - cx;
+                float dy = y - cy;
+                float eq = (dx * dx) / (a * a) + (dy * dy) / (b * b);
+
+                if (eq > 1f)
+                {
+                    tex.SetPixel(x, y, transparent);
+                    continue;
+                }
+
+                // Border ring.
+                if (eq > innerEq)
+                {
+                    tex.SetPixel(x, y, border);
+                    continue;
+                }
+
+                // Shading to look cylindrical: darker on left, brighter on right.
+                float t = Mathf.InverseLerp(-a, a, dx);
+                Color c = Color.Lerp(bodyShadow, body, t);
+
+                // Specular highlight stripe.
+                bool inStripe = (x >= Mathf.FloorToInt(cx + 1f) && x <= Mathf.FloorToInt(cx + 2f)) && Mathf.Abs(dy) <= 1.1f;
+                if (inStripe)
+                {
+                    c = Color.Lerp(c, highlight, 0.9f);
+                }
+
+                // Tiny deterministic speckle (keeps it from looking flat).
+                float h = Hash01(x, y, seed + 123);
+                if (h < 0.04f)
+                {
+                    c = Color.Lerp(c, Color.white, 0.25f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteAstronautPlayerPng(string fullPath, int seed)
+    {
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+        Color helmetFill = new Color(0.72f, 0.88f, 1f, 1f);
+        Color helmetBorder = new Color(0.12f, 0.42f, 0.6f, 1f);
+        Color suitFill = new Color(0.32f, 0.66f, 1f, 1f);
+        Color suitBorder = new Color(0.06f, 0.22f, 0.35f, 1f);
+        Color visorFill = new Color(0.04f, 0.25f, 0.45f, 1f);
+        Color visorHighlight = new Color(0.88f, 0.98f, 1f, 1f);
+        Color accent = new Color(1f, 0.92f, 0.55f, 1f);
+
+        Vector2 helmetCenter = new Vector2(8f, 10.2f);
+        float helmetOuter = 6.4f;
+        float helmetInner = 5.6f;
+
+        Vector2 bodyCenter = new Vector2(8f, 5.8f);
+        float bodyRx = 4.2f;
+        float bodyRy = 3.7f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color c = transparent;
+
+                // Helmet (circle + border).
+                float dx = x - helmetCenter.x;
+                float dy = y - helmetCenter.y;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                if (dist <= helmetOuter)
+                {
+                    c = dist >= helmetInner ? helmetBorder : helmetFill;
+                }
+
+                // Visor (rectangle inside helmet).
+                bool inVisor = (x >= 5 && x <= 10 && y >= 8 && y <= 11);
+                if (inVisor && c.a > 0f)
+                {
+                    bool visorEdge = (x == 5 || x == 10 || y == 8 || y == 11);
+                    c = visorEdge ? helmetBorder : visorFill;
+                    if ((x == 7 || x == 8) && (y == 9 || y == 10))
+                    {
+                        c = visorHighlight;
+                    }
+                }
+
+                // Suit body (oval).
+                float bx = (x - bodyCenter.x) / bodyRx;
+                float by = (y - bodyCenter.y) / bodyRy;
+                float bodyEq = bx * bx + by * by;
+                bool inBody = bodyEq <= 1f && y >= 2 && y <= 9;
+                if (inBody && c.a <= 0f)
+                {
+                    c = bodyEq > 0.86f ? suitBorder : suitFill;
+                }
+
+                // Backpack thruster (left side).
+                if (x >= 2 && x <= 4 && y >= 3 && y <= 7)
+                {
+                    bool edge = x == 2 || x == 4 || y == 3 || y == 7;
+                    c = edge ? suitBorder : accent;
+                }
+
+                // Antenna.
+                if (x == 8 && (y == 14 || y == 15))
+                {
+                    c = accent;
+                }
+                if (x == 8 && y == 13 && c.a <= 0f)
+                {
+                    c = suitBorder;
+                }
+
+                // Boots.
+                if (y <= 1)
+                {
+                    if ((x >= 5 && x <= 7) || (x >= 9 && x <= 11))
+                    {
+                        c = suitBorder;
+                        if (x == 6 || x == 10) c = accent;
+                    }
+                }
+
+                // Subtle suit speckle pattern (only the inner part of the body).
+                if (c.a > 0f && inBody && bodyEq <= 0.86f)
+                {
+                    float h = Hash01(x, y, seed + 99);
+                    if (h < 0.07f) c = Color.Lerp(suitFill, Color.white, 0.25f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteFloraEnemyPng(string fullPath, int seed)
+    {
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+
+        // Match the neon-green look (so your health pickup color stays consistent).
+        Color leafFill = new Color(0.18f, 1f, 0.55f, 1f);
+        Color leafBorder = new Color(0.05f, 0.35f, 0.2f, 1f);
+        Color vein = new Color(0.05f, 0.7f, 0.35f, 1f);
+        Color danger = new Color(1f, 0.32f, 0.25f, 1f);
+        Color mouthInner = new Color(0.95f, 0.18f, 0.20f, 1f);
+        Color mouthHi = new Color(1f, 0.7f, 0.55f, 1f);
+
+        int cx = 8;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color c = transparent;
+
+                // Legs/feet at the bottom: more than one leg.
+                if (y <= 1)
+                {
+                    if (x == 5 || x == 6 || x == 9 || x == 10) c = leafBorder;
+                    if (x == 6 || x == 9) c = leafFill;
+                }
+
+                // Main stem.
+                if (y >= 2 && y <= 13 && x >= 7 && x <= 9)
+                {
+                    bool edge = x == 7 || x == 9;
+                    c = edge ? leafBorder : leafFill;
+                }
+
+                // Crown body (bigger open-mouth head).
+                if (y >= 7 && y <= 12)
+                {
+                    int half = Mathf.Clamp(2 + (y - 7), 2, 6); // wider as you go down
+                    int left = cx - half;
+                    int right = cx + half;
+                    if (x >= left && x <= right)
+                    {
+                        bool edge = x == left || x == right || y == 7 || y == 12;
+                        c = edge ? leafBorder : leafFill;
+
+                        // Veins inside crown.
+                        if (!edge)
+                        {
+                            int diag = x - y;
+                            if (Mathf.Abs(diag - (cx - 7)) <= 1) c = Color.Lerp(c, vein, 0.6f);
+                            float h = Hash01(x, y, seed + 55);
+                            if (h < 0.05f) c = Color.Lerp(c, vein, 0.75f);
+                        }
+                    }
+                }
+
+                // Spikes at the top (more aggressive silhouette).
+                if (y >= 13)
+                {
+                    // Base green rim.
+                    if (x >= 4 && x <= 12)
+                    {
+                        if (x == 4 || x == 12 || y == 13) c = leafBorder;
+                        else c = leafFill;
+                    }
+
+                    // Red danger spikes.
+                    // y==14/15 produce the tall points.
+                    if (y == 13 && x % 2 == 0 && x >= 4 && x <= 12) c = danger;
+                    if (y == 14 && x >= 5 && x <= 11 && (x % 2 == 1)) c = danger;
+                    if (y == 15 && (x == 6 || x == 8 || x == 10)) c = danger;
+                }
+
+                // Big open mouth (centered under the spike crown).
+                if (y >= 9 && y <= 11 && x >= 6 && x <= 10)
+                {
+                    bool mouthEdge = (y == 9 || y == 11 || x == 6 || x == 10);
+                    c = mouthEdge ? leafBorder : mouthInner;
+
+                    // Teeth/lip highlights.
+                    if (!mouthEdge)
+                    {
+                        if ((x == 7 || x == 9) && y == 10) c = mouthHi;
+                        float h = Hash01(x, y, seed + 888);
+                        if (h < 0.04f) c = Color.Lerp(c, mouthHi, 0.35f);
+                    }
+                }
+
+                // Extra sap glow speckles.
+                if (c.a > 0f && y >= 7 && y <= 12)
+                {
+                    float h = Hash01(x, y, seed + 777);
+                    if (h < 0.03f) c = Color.Lerp(c, Color.white, 0.42f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteFaunaEnemyPng(string fullPath, int seed)
+    {
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+        // Darker palette + sharper silhouette.
+        Color bodyFill = new Color(0.72f, 0.22f, 0.08f, 1f);   // rusty crimson
+        Color bodyBorder = new Color(0.20f, 0.04f, 0.02f, 1f); // near-black
+        Color eyeGlow = new Color(0.10f, 1f, 0.55f, 1f);       // neon green
+        Color eyeWhite = new Color(0.75f, 1f, 0.95f, 1f);
+        Color pupil = new Color(0.02f, 0.20f, 0.18f, 1f);
+        Color mouth = new Color(1f, 0.25f, 0.2f, 1f);
+        Color accent = new Color(0.55f, 0.20f, 1f, 1f);       // alien purple
+
+        Vector2 center = new Vector2(8f, 8f);
+        float rx = 4.6f;
+        float ry = 4.1f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color c = transparent;
+
+                // Torso (rounded).
+                float bx = (x - center.x) / rx;
+                float by = (y - center.y) / ry;
+                float eq = bx * bx + by * by;
+                bool inTorso = eq <= 1f && y >= 3 && y <= 14;
+                if (inTorso)
+                {
+                    c = eq > 0.86f ? bodyBorder : bodyFill;
+                }
+
+                // Head spikes.
+                if (y == 12 || y == 13)
+                {
+                    if (x == 6 || x == 7 || x == 9 || x == 10) c = accent;
+                }
+                if (y == 14 && (x == 6 || x == 8 || x == 10)) c = accent;
+
+                // Back spine.
+                if (x == 8 && y >= 8 && y <= 13)
+                {
+                    if (y % 2 == 0) c = accent;
+                }
+
+                // Antennae.
+                if (y == 15 && (x == 6 || x == 9)) c = eyeGlow;
+                if (y == 14 && (x == 7 || x == 8)) c = bodyBorder;
+
+                // Eyes.
+                if (y == 9 && (x == 6 || x == 10)) c = eyeGlow;
+                if (y == 10 && (x == 6 || x == 10)) c = eyeWhite;
+                if (y == 10 && (x == 6 || x == 10)) c = pupil;
+
+                // Jaw + mouth.
+                if (y == 7 && x >= 7 && x <= 9) c = mouth;
+                if (y == 6 && (x == 7 || x == 9)) c = Color.Lerp(mouth, Color.white, 0.25f);
+                if (y == 8 && (x == 7 || x == 9)) c = Color.Lerp(mouth, Color.white, 0.15f);
+
+                // Legs.
+                if ((y == 3 || y == 4) && (x == 6 || x == 8 || x == 10)) c = bodyBorder;
+                if (y == 4 && (x == 5 || x == 11)) c = bodyBorder;
+
+                // Purple freckles over inner torso.
+                if (c.a > 0f && inTorso && eq <= 0.86f && c == bodyFill)
+                {
+                    float h = Hash01(x, y, seed + 913);
+                    if (h < 0.06f) c = Color.Lerp(c, accent, 0.65f);
+                }
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteAlienShooterEnemyPng(string fullPath, int seed)
+    {
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color transparent = new Color(0f, 0f, 0f, 0f);
+        Color bodyFill = new Color(0.15f, 0.65f, 1f, 1f);
+        Color bodyBorder = new Color(0.06f, 0.18f, 0.45f, 1f);
+        Color mask = new Color(0.02f, 0.15f, 0.3f, 1f);
+        Color glow = new Color(0.85f, 0.35f, 1f, 1f);
+        Color glow2 = new Color(0.25f, 0.95f, 1f, 1f);
+        Color tentacle = new Color(0.18f, 0.42f, 0.85f, 1f);
+
+        Vector2 center = new Vector2(8f, 8.2f);
+        float bodyRx = 5.0f;
+        float bodyRy = 4.6f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                Color c = transparent;
+
+                // Base body oval (alien).
+                float bx = (x - center.x) / bodyRx;
+                float by = (y - center.y) / bodyRy;
+                float eq = bx * bx + by * by;
+                bool inBody = eq <= 1f && y >= 3 && y <= 13;
+                if (inBody)
+                {
+                    c = eq > 0.86f ? bodyBorder : bodyFill;
+                }
+
+                // Slanted top horns.
+                if (y >= 13 && (x == 6 || x == 9))
+                {
+                    c = bodyBorder;
+                    if (y == 15) c = glow2;
+                }
+                if (y == 14 && (x == 5 || x == 10)) c = glow2;
+
+                // Tentacles left/right.
+                if (y >= 7 && y <= 13)
+                {
+                    if (x == 3 || x == 13)
+                    {
+                        c = tentacle;
+                        if (y % 2 == 0) c = Color.Lerp(tentacle, glow2, 0.45f);
+                    }
+                    if (x == 4 && y >= 9 && y <= 12) c = tentacle;
+                    if (x == 12 && y >= 9 && y <= 12) c = tentacle;
+                }
+
+                // Face mask (visor rectangle).
+                if (y >= 8 && y <= 10 && x >= 5 && x <= 11)
+                {
+                    bool edge = (x == 5 || x == 11 || y == 8 || y == 10);
+                    c = edge ? bodyBorder : mask;
+                    if (!edge && (x == 7 || x == 9) && y == 9)
+                    {
+                        c = glow2;
+                    }
+                }
+
+                // Glowing mouth.
+                float mdx = x - 8f;
+                float mdy = y - 7.2f;
+                float md = Mathf.Sqrt(mdx * mdx + mdy * mdy);
+                if (md <= 2.2f && y <= 9)
+                {
+                    bool mouthCore = md <= 1.3f;
+                    c = mouthCore ? glow2 : glow;
+                }
+
+                // Speckle (alien texture) on body/tentacles.
+                if (c.a > 0f && (inBody || x == 3 || x == 4 || x == 12 || x == 13))
+                {
+                    float h = Hash01(x, y, seed + 909);
+                    if (h < 0.04f) c = Color.Lerp(c, glow, 0.6f);
                 }
 
                 tex.SetPixel(x, y, c);

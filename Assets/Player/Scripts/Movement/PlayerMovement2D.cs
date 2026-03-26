@@ -97,11 +97,13 @@ public class PlayerMovement2D : MonoBehaviour
 
         if (moveInputRaw > 0.01f)
         {
-            spriteRenderer.flipX = false;
+            // Player art faces the opposite direction by default,
+            // so flip the sprite to match movement direction.
+            spriteRenderer.flipX = true;
         }
         else if (moveInputRaw < -0.01f)
         {
-            spriteRenderer.flipX = true;
+            spriteRenderer.flipX = false;
         }
     }
 

@@ -5,6 +5,10 @@ public class ResourceNode : MonoBehaviour, IRunResettable
 {
     [Header("Resource Settings")]
     [SerializeField] private string resourceId = "Iron";
+    [Header("Alien Tile Sprites (Optional)")]
+    [SerializeField] private Sprite ironNodeSprite;
+    [SerializeField] private Sprite crystalNodeSprite;
+    [SerializeField] private Sprite uraniumNodeSprite;
     [SerializeField] private int maxHealth = 3;
     [SerializeField] private int dropAmount = 1;
     [SerializeField] private ResourceItem resourceDropPrefab;
@@ -21,6 +25,7 @@ public class ResourceNode : MonoBehaviour, IRunResettable
     private bool playerInRange;
     private Collider2D triggerCollider;
     private PlayerUpgradeEffects activeMinerUpgrades;
+    private SpriteRenderer spriteRenderer;
 
     public string ResourceId => resourceId;
 
@@ -33,12 +38,36 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         }
 
         resourceId = id;
+        UpdateSpriteForResourceId();
     }
 
     private void Awake()
     {
         currentHealth = maxHealth;
         triggerCollider = GetComponent<Collider2D>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        UpdateSpriteForResourceId();
+    }
+
+    private void UpdateSpriteForResourceId()
+    {
+        if (spriteRenderer == null) return;
+        if (string.IsNullOrWhiteSpace(resourceId)) return;
+
+        string lower = resourceId.ToLowerInvariant();
+        if (lower.Contains("uranium"))
+        {
+            if (uraniumNodeSprite != null) spriteRenderer.sprite = uraniumNodeSprite;
+            return;
+        }
+        if (lower.Contains("crystal"))
+        {
+            if (crystalNodeSprite != null) spriteRenderer.sprite = crystalNodeSprite;
+            return;
+        }
+
+        // Default: Iron
+        if (ironNodeSprite != null) spriteRenderer.sprite = ironNodeSprite;
     }
 
     private void Update()

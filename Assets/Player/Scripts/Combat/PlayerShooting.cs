@@ -73,9 +73,11 @@ public class PlayerShooting : MonoBehaviour
     {
         if (playerSprite != null)
         {
-            return playerSprite.flipX ? -1f : 1f;
+            // `PlayerMovement2D` flips `flipX` to match the facing direction.
+            // Shooting direction sign must follow the same convention.
+            return playerSprite.flipX ? 1f : -1f;
         }
 
-        return transform.localScale.x < 0f ? -1f : 1f;
+        return transform.localScale.x < 0f ? 1f : -1f;
     }
 }

@@ -58,6 +58,11 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private float shooterBulletSpeed = 12f;
     [SerializeField] private int shooterBulletDamage = 10;
 
+    [Header("Enemy Sprites")]
+    [SerializeField] private Sprite floraEnemySprite;
+    [SerializeField] private Sprite faunaEnemySprite;
+    [SerializeField] private Sprite shooterEnemySprite;
+
     [Header("Oxygen Pickups (rare)")]
     [SerializeField] private int maxOxygenPickups = 2;
     [SerializeField] private float oxygenAvoidResourceRadius = 2.0f;
@@ -440,7 +445,9 @@ public class LevelSetupSpawner : MonoBehaviour
                 // Some enemies shoot back; chance scales with distance too.
                 // More frequent shooting enemies, especially at higher tiers.
                 float shooterChance = Mathf.Lerp(minShooterChance, maxShooterChance, difficultyT);
-                if (bulletPrefab != null && spawned != null && Random.value <= shooterChance)
+                bool willBeShooter = bulletPrefab != null && spawned != null && Random.value <= shooterChance;
+
+                if (willBeShooter)
                 {
                     EnemyShooterAI shooter = spawned.GetComponent<EnemyShooterAI>();
                     if (shooter == null)
@@ -453,6 +460,23 @@ public class LevelSetupSpawner : MonoBehaviour
                     // Extra multiplier so changes apply even if an older prefab/scene serialized value was used.
                     int shotDamage = Mathf.Max(1, Mathf.RoundToInt(shooterBulletDamage * Mathf.Lerp(1.0f, 2.6f, difficultyT) * 2.0f));
                     shooter.Configure(bulletPrefab, shooterRange, shooterCooldown, shotSpeed, shotDamage);
+                }
+
+                // Visuals: normal enemies are dangerous flora/fauna, shooters are alien race.
+                SpriteRenderer enemyRenderer = spawned != null ? spawned.GetComponent<SpriteRenderer>() : null;
+                if (enemyRenderer != null)
+                {
+                    if (willBeShooter && shooterEnemySprite != null)
+                    {
+                        enemyRenderer.sprite = shooterEnemySprite;
+                    }
+                    else
+                    {
+                        // Slightly bias towards fauna with distance so far-away spawns feel more varied.
+                        bool isFauna = Random.value < Mathf.Lerp(0.45f, 0.65f, difficultyT);
+                        Sprite chosen = isFauna ? faunaEnemySprite : floraEnemySprite;
+                        if (chosen != null) enemyRenderer.sprite = chosen;
+                    }
                 }
             }
         }

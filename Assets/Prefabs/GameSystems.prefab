@@ -233,6 +233,9 @@ MonoBehaviour:
   shooterCooldown: 1.2
   shooterBulletSpeed: 12
   shooterBulletDamage: 10
+  floraEnemySprite: {fileID: 21300000, guid: 05629c5c764feb5438df014e32e3ce10, type: 3}
+  faunaEnemySprite: {fileID: 21300000, guid: 0546ab9cf6273604aafb24926dfd07b0, type: 3}
+  shooterEnemySprite: {fileID: 21300000, guid: ad3400ce983b7f94089033fc7807ad9a, type: 3}
   maxOxygenPickups: 2
   oxygenAvoidResourceRadius: 2
   oxygenAvoidExistingPickupRadius: 0.6
