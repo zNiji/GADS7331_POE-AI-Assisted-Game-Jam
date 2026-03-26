@@ -25,6 +25,11 @@ public class EnemyHealth : MonoBehaviour, IDamageable, IRunResettable
 
         if (currentHealth <= 0)
         {
+            if (GameAudioManager.Instance != null)
+            {
+                GameAudioManager.Instance.PlayEnemyDeath(transform.position);
+            }
+
             if (deathParticles != null)
             {
                 ParticleSystem spawned = Instantiate(deathParticles, transform.position, Quaternion.identity);

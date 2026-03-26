@@ -179,6 +179,11 @@ public class DeathUpgradeMenuUI : MonoBehaviour
 
     private void SelectUpgrade(UpgradeDefinition definition)
     {
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayMenuClick();
+        }
+
         if (upgradeSystem != null && definition != null)
         {
             // Uses extracted/banked resources only.
@@ -200,6 +205,11 @@ public class DeathUpgradeMenuUI : MonoBehaviour
 
     private void ContinueWithoutUpgrade()
     {
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayMenuClick();
+        }
+
         HideImmediate();
 
         if (gameManager != null)

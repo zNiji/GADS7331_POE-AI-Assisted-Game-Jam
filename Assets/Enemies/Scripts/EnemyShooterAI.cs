@@ -92,6 +92,11 @@ public class EnemyShooterAI : MonoBehaviour
             b.Initialize(direction, bulletSpeed, bulletDamage, transform.root.gameObject);
         }
 
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayEnemyShoot(spawnPos, 1f);
+        }
+
         // Extra safety: ignore collision between the bullet and this shooter's colliders.
         Collider2D shooterCol = GetComponentInChildren<Collider2D>();
         if (shooterCol != null && bullet != null)

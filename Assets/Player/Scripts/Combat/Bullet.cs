@@ -44,11 +44,20 @@ public class Bullet : MonoBehaviour
         if (damageable == null)
         {
             // Hit the environment (e.g. ground/platform). Destroy the bullet.
+            if (GameAudioManager.Instance != null)
+            {
+                GameAudioManager.Instance.PlayBulletHit(transform.position, 0.6f);
+            }
             Destroy(gameObject);
             return;
         }
 
         damageable.TakeDamage(damage);
+
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayBulletHit(transform.position, 1f);
+        }
         Destroy(gameObject);
     }
 }

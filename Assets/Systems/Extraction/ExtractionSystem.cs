@@ -78,6 +78,11 @@ public class ExtractionSystem : MonoBehaviour
         extractionRequested = true;
         extractionCompleteTime = Time.time + Mathf.Max(0.1f, extractionDelaySeconds);
 
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayExtractStart(transform.position);
+        }
+
         if (HUDController.Instance != null)
         {
             HUDController.Instance.SetExtractionStatus("Extraction called...");
@@ -99,6 +104,11 @@ public class ExtractionSystem : MonoBehaviour
             HUDController.Instance.SetExtractionStatus("Extraction successful. Resources secured.");
         }
 
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayExtractSuccess(transform.position);
+        }
+
         if (GameManager.Instance != null)
         {
             GameManager.Instance.ShowUpgradeMenuAfterExtraction();
@@ -111,6 +121,11 @@ public class ExtractionSystem : MonoBehaviour
         if (HUDController.Instance != null)
         {
             HUDController.Instance.SetExtractionStatus("Extraction failed. Resources lost.");
+        }
+
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayExtractFail(transform.position);
         }
     }
 }

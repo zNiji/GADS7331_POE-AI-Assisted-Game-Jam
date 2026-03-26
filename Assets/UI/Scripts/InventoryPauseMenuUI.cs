@@ -41,6 +41,8 @@ public class InventoryPauseMenuUI : MonoBehaviour
         }
 
         Refresh();
+
+        HookButtonClickSounds();
     }
 
     private void OnDisable()
@@ -253,5 +255,24 @@ public class InventoryPauseMenuUI : MonoBehaviour
             if (bankedInventoryText != null) bankedInventoryText.text = sb.ToString().TrimEnd();
         }
     }
+
+    private void HookButtonClickSounds()
+    {
+        if (GameAudioManager.Instance == null) return;
+
+        Button[] buttons = GetComponentsInChildren<Button>(true);
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button b = buttons[i];
+            if (b == null) continue;
+
+            if (b.GetComponent<ButtonClickMarker>() != null) continue;
+            b.gameObject.AddComponent<ButtonClickMarker>();
+
+            b.onClick.AddListener(() => GameAudioManager.Instance.PlayMenuClick());
+        }
+    }
+
+    private class ButtonClickMarker : MonoBehaviour { }
 }
 

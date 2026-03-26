@@ -66,6 +66,13 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        // Ensure gameplay audio exists for the level.
+        if (GameAudioManager.Instance == null)
+        {
+            GameObject go = new GameObject("GameAudioManager");
+            go.AddComponent<GameAudioManager>();
+        }
+
         // Be robust: scene name filtering can break if the gameplay scene is renamed.
         // Instead, only proceed when we can see core gameplay objects.
         PlayerStats psProbe = FindAnyObjectByType<PlayerStats>();
@@ -300,6 +307,12 @@ public class GameManager : MonoBehaviour
     {
         IsPaused = pauseState;
         Time.timeScale = IsPaused ? 0f : 1f;
+
+        // Audio feedback for pause/unpause (pause menus, death menu, etc).
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayPauseToggle();
+        }
 
         if (HUDController.Instance != null)
         {

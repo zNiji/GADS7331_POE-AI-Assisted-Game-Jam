@@ -15,6 +15,13 @@ public class PlayerMovement2D : MonoBehaviour
     [SerializeField] private float groundCheckRadius = 0.15f;
     [SerializeField] private LayerMask groundLayer;
 
+    [Header("Landing SFX")]
+    [SerializeField] private float minFallSpeedForLandSfx = 3.0f;
+    [SerializeField] private float landSfxVolume = 1f;
+
+    private bool wasGrounded;
+    private bool didInitialGroundCheck;
+
     private Rigidbody2D rb;
     private float moveInputRaw;
     private bool jumpPressed;
@@ -59,6 +66,20 @@ public class PlayerMovement2D : MonoBehaviour
     private void FixedUpdate()
     {
         CheckGrounded();
+        if (didInitialGroundCheck)
+        {
+            // Play landing sound when transitioning from airborne -> grounded.
+            if (!wasGrounded && isGrounded && rb.linearVelocity.y <= -minFallSpeedForLandSfx)
+            {
+                if (GameAudioManager.Instance != null)
+                {
+                    GameAudioManager.Instance.PlayLand(transform.position, landSfxVolume);
+                }
+            }
+        }
+
+        wasGrounded = isGrounded;
+        didInitialGroundCheck = true;
         HandleHorizontalMovement();
         HandleJump();
         jumpPressed = false;

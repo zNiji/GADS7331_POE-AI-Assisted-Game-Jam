@@ -62,6 +62,10 @@ public class PlayerShooting : MonoBehaviour
         {
             AudioSource.PlayClipAtPoint(shootSfx, firePoint.position, shootVolume);
         }
+        else if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayShoot(firePoint.position, shootVolume);
+        }
 
         if (CameraShake2D.Instance != null)
         {

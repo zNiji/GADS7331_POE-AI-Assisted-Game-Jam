@@ -26,6 +26,11 @@ public class HealthPickup : MonoBehaviour
 
         stats.Heal(healAmount);
 
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayHeal(transform.position, 1f);
+        }
+
         if (destroyOnPickup)
         {
             Destroy(gameObject);

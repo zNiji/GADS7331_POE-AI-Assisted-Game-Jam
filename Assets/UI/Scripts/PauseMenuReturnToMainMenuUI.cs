@@ -81,6 +81,11 @@ public class PauseMenuReturnToMainMenuUI : MonoBehaviour
 
     private void ReturnToMainMenu()
     {
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayMenuClick();
+        }
+
         EnsureSavePromptUI();
 
         if (savePromptPanel != null)
@@ -126,10 +131,18 @@ public class PauseMenuReturnToMainMenuUI : MonoBehaviour
         // Save slots button (opens a separate panel, as requested).
         Button chooseSlots = CreateButtonChild(savePromptPanel.transform, "ChooseSaveSlotsButton", "Choose Save Slot...", new Vector2(0f, 10f), new Vector2(560f, 56f));
         chooseSlots.onClick.AddListener(OpenSaveSlotsPanel);
+        if (GameAudioManager.Instance != null)
+        {
+            chooseSlots.onClick.AddListener(() => GameAudioManager.Instance.PlayMenuClick());
+        }
 
         // Don't save button
         Button noSave = CreateButtonChild(savePromptPanel.transform, "NoSaveButton", "Don't Save & Return", new Vector2(0f, -70f), new Vector2(560f, 56f));
         noSave.onClick.AddListener(ReturnToMainMenuWithoutSaving);
+        if (GameAudioManager.Instance != null)
+        {
+            noSave.onClick.AddListener(() => GameAudioManager.Instance.PlayMenuClick());
+        }
     }
 
     private void EnsureSaveSlotsUI()
@@ -175,11 +188,19 @@ public class PauseMenuReturnToMainMenuUI : MonoBehaviour
 
             Button b = CreateButtonChild(saveSlotsPanel.transform, btnName, $"Save Slot {captured + 1}", pos, new Vector2(620f, 66f));
             b.onClick.AddListener(() => SaveAndReturn(captured));
+            if (GameAudioManager.Instance != null)
+            {
+                b.onClick.AddListener(() => GameAudioManager.Instance.PlayMenuClick());
+            }
         }
 
         // Back button
         Button back = CreateButtonChild(saveSlotsPanel.transform, "BackToPromptButton", "Back", new Vector2(0f, -140f), new Vector2(300f, 56f));
         back.onClick.AddListener(BackToSavePrompt);
+        if (GameAudioManager.Instance != null)
+        {
+            back.onClick.AddListener(() => GameAudioManager.Instance.PlayMenuClick());
+        }
     }
 
     private void OpenSaveSlotsPanel()
@@ -310,6 +331,11 @@ public class PauseMenuReturnToMainMenuUI : MonoBehaviour
         if (GameManager.Instance != null)
         {
             GameManager.Instance.SetPause(false);
+        }
+
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayMenuClick();
         }
 
         SceneManager.LoadScene(mainMenuSceneName);

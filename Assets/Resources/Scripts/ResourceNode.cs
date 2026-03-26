@@ -98,6 +98,10 @@ public class ResourceNode : MonoBehaviour, IRunResettable
         {
             AudioSource.PlayClipAtPoint(mineSfx, transform.position, mineSfxVolume);
         }
+        else if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayMine(transform.position, 1f);
+        }
 
         if (currentHealth <= 0)
         {

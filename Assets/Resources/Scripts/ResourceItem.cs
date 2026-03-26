@@ -69,6 +69,10 @@ public class ResourceItem : MonoBehaviour
         {
             AudioSource.PlayClipAtPoint(pickupSfx, transform.position, pickupSfxVolume);
         }
+        else if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayPickup(transform.position, 1f);
+        }
 
         Destroy(gameObject);
     }

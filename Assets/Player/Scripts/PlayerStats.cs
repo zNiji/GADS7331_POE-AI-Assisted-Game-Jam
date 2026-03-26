@@ -69,9 +69,31 @@ public class PlayerStats : MonoBehaviour, IDamageable
             CameraShake2D.Instance.Shake(damageShakeDuration, damageShakeMagnitude);
         }
 
+        // Ensure gameplay audio exists when damage happens (scene load ordering can vary).
+        if (GameAudioManager.Instance == null)
+        {
+            GameAudioManager existing = FindAnyObjectByType<GameAudioManager>();
+            if (existing == null)
+            {
+                GameObject go = new GameObject("GameAudioManager");
+                go.AddComponent<GameAudioManager>();
+            }
+        }
+
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayPlayerHurt(transform.position, 1f);
+        }
+
         if (currentHealth <= 0f)
         {
             isDead = true;
+
+            if (GameAudioManager.Instance != null)
+            {
+                GameAudioManager.Instance.PlayPlayerDeath(transform.position);
+            }
+
             OnDied?.Invoke();
         }
     }

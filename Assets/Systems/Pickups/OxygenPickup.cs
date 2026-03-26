@@ -25,6 +25,11 @@ public class OxygenPickup : MonoBehaviour
 
         stats.RestoreOxygen(oxygenAmount);
 
+        if (GameAudioManager.Instance != null)
+        {
+            GameAudioManager.Instance.PlayOxygen(transform.position, 1f);
+        }
+
         if (destroyOnPickup)
         {
             Destroy(gameObject);
