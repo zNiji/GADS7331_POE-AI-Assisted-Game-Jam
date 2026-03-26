@@ -319,25 +319,53 @@ public static class GenerateCorePrefabs2D
         ClearChildren(geometryRoot);
         ClearChildren(spawnPointsRoot);
 
-        Sprite groundSprite = CreateAlienSquareTileSprite(
-            "spr_alien_ground_block",
-            baseFill: new Color(0.10f, 0.12f, 0.18f),
-            borderColor: new Color(0.03f, 0.05f, 0.08f),
-            accentColor: new Color(0.25f, 1f, 0.65f),
-            accentChance01: 0.10f,
-            seed: 505
-        );
-        BuildGroundIfMissing(geometryRoot, groundSprite);
-        BuildPlatformsIfMissing(geometryRoot, groundSprite);
+        // Multiple ground variants to reduce the "repeating blocks" look.
+        Sprite[] groundSprites = new Sprite[]
+        {
+            CreateJungleSquareTileSprite(
+                "spr_jungle_ground_block_A",
+                baseFill: new Color(0.06f, 0.22f, 0.12f),
+                borderColor: new Color(0.02f, 0.08f, 0.05f),
+                accentColor: new Color(0.35f, 1f, 0.45f),
+                accentChance01: 0.12f,
+                seed: 505
+            ),
+            CreateJungleSquareTileSprite(
+                "spr_jungle_ground_block_B",
+                baseFill: new Color(0.06f, 0.22f, 0.12f),
+                borderColor: new Color(0.02f, 0.08f, 0.05f),
+                accentColor: new Color(0.35f, 1f, 0.45f),
+                accentChance01: 0.12f,
+                seed: 506
+            ),
+            CreateJungleSquareTileSprite(
+                "spr_jungle_ground_block_C",
+                baseFill: new Color(0.06f, 0.22f, 0.12f),
+                borderColor: new Color(0.02f, 0.08f, 0.05f),
+                accentColor: new Color(0.35f, 1f, 0.45f),
+                accentChance01: 0.12f,
+                seed: 507
+            ),
+            CreateJungleSquareTileSprite(
+                "spr_jungle_ground_block_D",
+                baseFill: new Color(0.06f, 0.22f, 0.12f),
+                borderColor: new Color(0.02f, 0.08f, 0.05f),
+                accentColor: new Color(0.35f, 1f, 0.45f),
+                accentChance01: 0.12f,
+                seed: 508
+            ),
+        };
+        BuildGroundIfMissing(geometryRoot, groundSprites);
+        BuildPlatformsIfMissing(geometryRoot, groundSprites);
 
-        // World/scene background behind the generated level (alien planet).
+        // World/scene background behind the generated level (jungle).
         Transform existingBg = levelRoot.transform.Find("LevelBackground");
         if (existingBg != null)
         {
             Object.DestroyImmediate(existingBg.gameObject);
         }
 
-        Sprite bgSprite = CreateAlienBackgroundSprite("spr_alien_background", seed: 707);
+        Sprite bgSprite = CreateJungleBackgroundSprite("spr_jungle_background", seed: 707);
         GameObject bgGO = new GameObject("LevelBackground", typeof(SpriteRenderer));
         bgGO.transform.SetParent(levelRoot.transform, false);
         SpriteRenderer bgSR = bgGO.GetComponent<SpriteRenderer>();
@@ -345,13 +373,56 @@ public static class GenerateCorePrefabs2D
         bgSR.sortingOrder = -50; // keep definitely behind ground blocks
         bgSR.color = Color.white;
         // Put it in the same Z-plane as gameplay so the camera definitely draws it.
-        bgGO.transform.position = new Vector3(0f, 0f, 0f);
-        // Scale to cover the typical visible area + wider generated map.
-        // spr size is ~4x4 units (64px / 16ppu), so this gives a big starfield.
-        // Make it tall enough for the expanded generated level height.
-        bgGO.transform.localScale = new Vector3(75f, 40f, 1f);
+        // Keep the tiled look (the intended style), but avoid seams by snapping tile size.
+        bgSR.drawMode = SpriteDrawMode.Tiled;
+
+        // Compute bounds of generated geometry so the background covers everything.
+        Bounds levelBounds = new Bounds(Vector3.zero, new Vector3(60f, 30f, 1f));
+        bool hasBounds = false;
+        SpriteRenderer[] geoRenderers = geometryRoot.GetComponentsInChildren<SpriteRenderer>(true);
+        for (int i = 0; i < geoRenderers.Length; i++)
+        {
+            SpriteRenderer sr = geoRenderers[i];
+            if (sr == null) continue;
+            if (!hasBounds)
+            {
+                levelBounds = sr.bounds;
+                hasBounds = true;
+            }
+            else
+            {
+                levelBounds.Encapsulate(sr.bounds);
+            }
+        }
+
+        Vector2 pad = new Vector2(30f, 25f);
+        Vector2 targetSize = new Vector2(levelBounds.size.x + pad.x, levelBounds.size.y + pad.y);
+
+        // IMPORTANT:
+        // Horizontal seams were fixed by snapping width to whole tiles.
+        // Vertical hard lines come from repeating top/bottom rows.
+        // So we tile only horizontally and stretch a single tile vertically.
+        if (bgSprite != null)
+        {
+            Vector2 tileSize = bgSprite.bounds.size; // world units at current PPU
+            float tileX = Mathf.Max(0.001f, tileSize.x);
+            float tileY = Mathf.Max(0.001f, tileSize.y);
+
+            float tilesX = Mathf.Ceil(targetSize.x / tileX);
+            bgSR.size = new Vector2(tilesX * tileX, tileY); // one tile high
+
+            // Stretch that single vertical tile to cover the full level height.
+            bgGO.transform.localScale = new Vector3(1f, targetSize.y / tileY, 1f);
+        }
+        else
+        {
+            bgSR.size = targetSize;
+            bgGO.transform.localScale = Vector3.one;
+        }
+
+        bgGO.transform.position = new Vector3(levelBounds.center.x, levelBounds.center.y, 0f);
         string bgName = bgSprite != null ? bgSprite.name : "null";
-        Debug.Log($"[CreatePlayableTestLevel] Background sprite: {bgName}, sortingOrder: {bgSR.sortingOrder}");
+        Debug.Log($"[CreatePlayableTestLevel] Background sprite: {bgName}, sortingOrder: {bgSR.sortingOrder}, size: {bgSR.size}");
 
         BuildSpawnPointsIfMissing(spawnPointsRoot);
         SnapSpawnPointsToGround(spawnPointsRoot);
@@ -1760,6 +1831,82 @@ public static class GenerateCorePrefabs2D
         return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.1f, 0.1f, 0.2f), new Color(0.05f, 0.05f, 0.1f));
     }
 
+    private static Sprite CreateJungleBackgroundSprite(string name, int seed)
+    {
+        // Taller/wider background so it covers the generated map vertically.
+        // Higher resolution so it reads like "shapes" not big blocks.
+        int w = 256;
+        // Increase height so we don't need heavy vertical stretching.
+        int h = 384;
+
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        WriteJungleBackgroundPng(fullPath, w, h, seed);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.wrapMode = TextureWrapMode.Repeat;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, new Color(0.05f, 0.25f, 0.12f), new Color(0.01f, 0.08f, 0.05f));
+    }
+
+    private static Sprite CreateJungleSquareTileSprite(
+        string name,
+        Color baseFill,
+        Color borderColor,
+        Color accentColor,
+        float accentChance01,
+        int seed)
+    {
+        string assetPath = ArtDir + "/" + name + ".png";
+        string fullPath = ToFullProjectPath(assetPath);
+        string fullDir = Path.GetDirectoryName(fullPath);
+        if (!string.IsNullOrEmpty(fullDir) && !Directory.Exists(fullDir))
+        {
+            Directory.CreateDirectory(fullDir);
+        }
+
+        // Square tile generator so ground/platform stays crisp.
+        WriteJungleSquareTilePng(fullPath, 16, baseFill, borderColor, accentColor, accentChance01, seed, drawCross: false);
+
+        AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceSynchronousImport);
+        TextureImporter importer = AssetImporter.GetAtPath(assetPath) as TextureImporter;
+        if (importer != null)
+        {
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 16f;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            EditorUtility.SetDirty(importer);
+            importer.SaveAndReimport();
+        }
+
+        Sprite loaded = AssetDatabase.LoadAssetAtPath<Sprite>(assetPath);
+        return loaded != null ? loaded : CreateFallbackSprite(name, baseFill, borderColor);
+    }
+
     private static Sprite CreateAlienSquareTileSprite(
         string name,
         Color baseFill,
@@ -2184,6 +2331,318 @@ public static class GenerateCorePrefabs2D
                 c.g = Mathf.Clamp01(c.g);
                 c.b = Mathf.Clamp01(c.b);
                 c.a = 1f;
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteJungleBackgroundPng(string fullPath, int width, int height, int seed)
+    {
+        Texture2D tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        // Deep jungle palette.
+        // Bioluminescent jungle (more purples/blues like your reference).
+        Color baseCol = new Color(0.01f, 0.08f, 0.10f, 1f);
+        Color baseCol2 = new Color(0.02f, 0.12f, 0.07f, 1f);
+        Color mistCol = new Color(0.06f, 0.35f, 0.25f, 1f);
+        Color vineCol = new Color(0.10f, 0.55f, 0.35f, 1f);
+        Color canopyA = new Color(0.20f, 0.45f, 0.55f, 1f); // teal-blue
+        Color canopyB = new Color(0.35f, 0.20f, 0.55f, 1f); // purple
+        Color trunkCol = new Color(0.05f, 0.18f, 0.14f, 1f);
+        Color rootCol = new Color(0.04f, 0.12f, 0.10f, 1f);
+        Color rockCol = new Color(0.10f, 0.12f, 0.16f, 1f);
+        Color darkShadow = new Color(0.00f, 0.05f, 0.06f, 1f);
+        Color glowCyan = new Color(0.20f, 0.95f, 1f, 1f);
+        Color glowGreen = new Color(0.25f, 1f, 0.55f, 1f);
+        Color glowPurple = new Color(0.85f, 0.35f, 1f, 1f);
+        Color glowBlue = new Color(0.35f, 0.55f, 1f, 1f);
+
+        Vector2[] blobs = new Vector2[]
+        {
+            new Vector2(width * 0.18f, height * 0.18f),
+            new Vector2(width * 0.42f, height * 0.22f),
+            new Vector2(width * 0.62f, height * 0.30f),
+            new Vector2(width * 0.82f, height * 0.20f),
+        };
+        float[] sigmas = new float[] { width * 0.20f, width * 0.16f, width * 0.18f, width * 0.22f };
+
+        // Deterministic tree silhouettes.
+        int treeCount = 7;
+        int[] treeX = new int[treeCount];
+        int[] trunkW = new int[treeCount];
+        int[] trunkTopY = new int[treeCount];
+        int[] trunkBottomY = new int[treeCount];
+        int[] canopyR = new int[treeCount];
+        int[] canopyY = new int[treeCount];
+        for (int i = 0; i < treeCount; i++)
+        {
+            float rx = Hash01(i * 13 + 11, i * 7 + 3, seed + 444);
+            float rtop = Hash01(i * 5 + 2, i * 9 + 1, seed + 555);
+            float rb = Hash01(i * 17 + 5, i * 11 + 9, seed + 666);
+            float rcan = Hash01(i * 21 + 8, i * 23 + 2, seed + 777);
+
+            treeX[i] = Mathf.Clamp(Mathf.RoundToInt(6 + rx * (width - 12)), 0, width - 1);
+            trunkW[i] = Mathf.Clamp(1 + Mathf.RoundToInt(Hash01(i, i + 1, seed + 88) * 1.9f), 1, 3);
+            canopyY[i] = Mathf.Clamp(Mathf.RoundToInt(6 + rtop * (height * 0.40f)), 0, height - 1);
+            trunkTopY[i] = canopyY[i] + 1;
+            trunkBottomY[i] = Mathf.Clamp(Mathf.RoundToInt(height * 0.70f + rb * (height * 0.10f)), 0, height - 1);
+            canopyR[i] = Mathf.Clamp(Mathf.RoundToInt(6 + rcan * 6f), 3, 10);
+        }
+
+        float Smooth01(float t)
+        {
+            t = Mathf.Clamp01(t);
+            return t * t * (3f - 2f * t);
+        }
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                float px = x;
+                float py = y;
+
+                // Bottom fog/mist.
+                float mistT = Smooth01((py - height * 0.45f) / (height * 0.55f));
+                Color baseMix = Color.Lerp(baseCol2, baseCol, Mathf.Clamp01(py / (height * 0.9f)));
+                Color c = Color.Lerp(mistCol, baseMix, mistT);
+
+                // Canopy haze blobs.
+                float canopy = 0f;
+                for (int i = 0; i < blobs.Length; i++)
+                {
+                    float dx = px - blobs[i].x;
+                    float dy = py - blobs[i].y;
+                    canopy += Mathf.Exp(-(dx * dx + dy * dy) / (2f * sigmas[i] * sigmas[i]));
+                }
+                canopy = Mathf.Clamp01(canopy);
+
+                Color canopyCol = Color.Lerp(canopyA, canopyB, Hash01(x, y, seed + 99));
+                c = Color.Lerp(c, canopyCol, Smooth01(canopy) * 0.8f);
+
+                // Tree silhouettes: trunk + canopy.
+                // Keep canopy in upper/mid region so it reads as layers.
+                for (int i = 0; i < treeCount; i++)
+                {
+                    bool inTrunk = x >= treeX[i] && x < treeX[i] + trunkW[i] && y >= trunkTopY[i] && y <= trunkBottomY[i];
+                    if (inTrunk)
+                    {
+                        c = Color.Lerp(c, trunkCol, 0.70f);
+                    }
+
+                    float dx = (px - (treeX[i] + trunkW[i] * 0.5f));
+                    float dy = (py - canopyY[i]);
+                    float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                    if (dist <= canopyR[i])
+                    {
+                        float t = 1f - (dist / Mathf.Max(1f, canopyR[i]));
+                        Color treeCanopy = Color.Lerp(canopyA, canopyB, Hash01(x + i * 3, y + i * 5, seed + 900));
+                        c = Color.Lerp(c, treeCanopy, t * 0.65f);
+
+                        // Shadow speckle inside canopy.
+                        if (t > 0.2f && Hash01(x, y, seed + 1000 + i * 7) < 0.02f)
+                        {
+                            c = Color.Lerp(c, darkShadow, 0.6f);
+                        }
+                    }
+                }
+
+                // Vines hanging down (thin columns).
+                // Bias start higher so vines feel like they come from above.
+                float vineStart = height * 0.18f + Hash01(x, 0, seed + 321) * (height * 0.22f);
+                if (py >= vineStart && py <= height * 0.92f)
+                {
+                    float v = Hash01(x + 23, (int)py, seed + 333);
+                    if (v < 0.018f)
+                    {
+                        // soften vine edges so they don't look like hard vertical seams
+                        float soft = Mathf.InverseLerp(0.018f, 0.0f, v);
+                        c = Color.Lerp(c, vineCol, 0.35f + 0.35f * soft);
+                    }
+                }
+
+                // Firefly-like dots.
+                float sparkle = Hash01(x, y, seed + 1234);
+                if (sparkle < 0.01f && py < height * 0.65f)
+                {
+                    float s = Hash01(x + 9, y + 7, seed + 2222);
+                    c += s * 0.35f * Color.white;
+                }
+
+                // Rocks near the bottom.
+                if (py > height * 0.72f)
+                {
+                    float r = Hash01(x + 101, y + 33, seed + 123);
+                    if (r < 0.010f)
+                    {
+                        c = Color.Lerp(c, rockCol, 0.8f);
+                    }
+                }
+
+                // Roots near the bottom, jagged horizontal spread.
+                if (py > height * 0.80f)
+                {
+                    float rootN = Hash01(x + 7, y + 19, seed + 456);
+                    if (rootN < 0.018f)
+                    {
+                        c = Color.Lerp(c, rootCol, 0.8f);
+                    }
+                    // occasional “root smear” stripes
+                    if ((x + y) % 11 == 0 && rootN < 0.05f)
+                    {
+                        c = Color.Lerp(c, rootCol, 0.35f);
+                    }
+                }
+
+                // Bioluminescent plants: stalks + glowing bulbs (recognizable shapes).
+                // Place a few deterministic plant clusters across the width.
+                int plantCount = 9;
+                for (int i = 0; i < plantCount; i++)
+                {
+                    float rx = Hash01(i * 31 + 3, i * 17 + 9, seed + 8080);
+                    float ry = Hash01(i * 13 + 7, i * 19 + 5, seed + 9090);
+                    int px0 = Mathf.RoundToInt(12 + rx * (width - 24));
+                    int py0 = Mathf.RoundToInt(height * (0.30f + 0.40f * ry)); // mid/lower
+                    int stalkH = 10 + Mathf.RoundToInt(Hash01(i * 9 + 1, i * 7 + 2, seed + 6060) * 26f);
+                    int bulbCount = 1 + Mathf.RoundToInt(Hash01(i * 5 + 4, i * 3 + 6, seed + 5050) * 2f);
+
+                    // Stalk (thin vertical).
+                    if (Mathf.Abs(x - px0) <= 1 && y >= py0 - stalkH && y <= py0)
+                    {
+                        float t = Mathf.InverseLerp(py0 - stalkH, py0, y);
+                        Color stalkCol = Color.Lerp(vineCol, canopyCol, 0.35f);
+                        c = Color.Lerp(c, stalkCol, 0.45f + 0.25f * t);
+                    }
+
+                    // Bulbs at the top (glow circles).
+                    for (int b = 0; b < bulbCount; b++)
+                    {
+                        int bx = px0 + (b - 1) * 4;
+                        int by = py0 - 3 - b * 2;
+                        float dx = x - bx;
+                        float dy = y - by;
+                        float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                        float r0 = 3.8f;
+                        if (dist <= r0)
+                        {
+                            float g = 1f - (dist / r0);
+                            Color glowCol = (i % 3 == 0) ? glowCyan : (i % 3 == 1) ? glowPurple : glowGreen;
+                            c = Color.Lerp(c, glowCol, g * 0.55f);
+                        }
+                        // Outer faint halo.
+                        float r1 = 6.5f;
+                        if (dist <= r1 && dist > r0)
+                        {
+                            float g = 1f - (dist / r1);
+                            Color glowCol = (i % 2 == 0) ? glowBlue : glowCyan;
+                            c = Color.Lerp(c, glowCol, g * 0.18f);
+                        }
+                    }
+                }
+
+                c.r = Mathf.Clamp01(c.r);
+                c.g = Mathf.Clamp01(c.g);
+                c.b = Mathf.Clamp01(c.b);
+                c.a = 1f;
+
+                tex.SetPixel(x, y, c);
+            }
+        }
+
+        // Make the texture seamlessly tileable (prevents visible seams/lines when using SpriteDrawMode.Tiled).
+        for (int y = 0; y < height; y++)
+        {
+            tex.SetPixel(width - 1, y, tex.GetPixel(0, y));
+        }
+        for (int x = 0; x < width; x++)
+        {
+            tex.SetPixel(x, height - 1, tex.GetPixel(x, 0));
+        }
+
+        tex.Apply();
+        File.WriteAllBytes(fullPath, tex.EncodeToPNG());
+        Object.DestroyImmediate(tex);
+    }
+
+    private static void WriteJungleSquareTilePng(
+        string fullPath,
+        int size,
+        Color baseFill,
+        Color borderColor,
+        Color accentColor,
+        float accentChance01,
+        int seed,
+        bool drawCross)
+    {
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        int mid = size / 2;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                bool border = x <= 1 || x >= size - 2 || y <= 1 || y >= size - 2;
+                Color c = border ? borderColor : baseFill;
+
+                if (!border)
+                {
+                    // Soil + grass:
+                    // Top few rows are grass (accentColor), rest is soil (baseFill).
+                    int grassCut = Hash01(x, seed, seed + 707) < 0.28f ? 1 : 0; // occasional shorter grass
+                    bool isGrass = y >= (size - 4 - grassCut);
+
+                    if (isGrass)
+                    {
+                        c = accentColor;
+
+                        // Grass variation: some mossy dark clumps.
+                        float h = Hash01(x + 19, y + 3, seed);
+                        if (h < 0.18f)
+                        {
+                            c = Color.Lerp(c, Color.Lerp(baseFill, borderColor, 0.3f), 0.6f);
+                        }
+
+                        // Leaf blades (diagonal streaks).
+                        int diag = x - y;
+                        float v = Hash01(x, y, seed + 909);
+                        if (Mathf.Abs(diag - (mid - 2)) <= 0 && v < 0.65f)
+                        {
+                            c = Color.Lerp(c, Color.white, 0.12f);
+                        }
+                    }
+                    else
+                    {
+                        // Soil speckles and occasional roots.
+                        float h = Hash01(x, y, seed + 101);
+                        if (h < accentChance01 * 0.65f)
+                        {
+                            c = Color.Lerp(c, Color.Lerp(accentColor, baseFill, 0.3f), 0.55f);
+                        }
+
+                        // Rooty lines.
+                        if (y > size / 2 && Hash01(x + 7, y, seed + 2222) < 0.02f)
+                        {
+                            c = Color.Lerp(c, Color.Lerp(borderColor, baseFill, 0.5f), 0.8f);
+                        }
+                    }
+
+                    // Optional plus sign (compat, not used for ground).
+                    if (drawCross)
+                    {
+                        bool crossPixel = x == mid || y == mid || x == mid - 1 || y == mid - 1;
+                        if (crossPixel) c = Color.Lerp(c, accentColor, 0.85f);
+                    }
+                }
 
                 tex.SetPixel(x, y, c);
             }
@@ -2920,7 +3379,7 @@ public static class GenerateCorePrefabs2D
         }
     }
 
-    private static void BuildGroundIfMissing(Transform geometryRoot, Sprite groundSprite)
+    private static void BuildGroundIfMissing(Transform geometryRoot, Sprite[] groundSprites)
     {
         if (geometryRoot.Find("GroundRow") != null)
         {
@@ -2934,12 +3393,15 @@ public static class GenerateCorePrefabs2D
         // Wider map for exploration (player starts near x = 0).
         for (int x = -140; x <= 140; x++)
         {
-            CreateBlock(root.transform, groundSprite, new Vector3(x, -3f, 0f), true);
-            CreateBlock(root.transform, groundSprite, new Vector3(x, -4f, 0f), true);
+            if (groundSprites == null || groundSprites.Length == 0) return;
+            int idx = Mathf.Abs(x) % groundSprites.Length;
+            Sprite sprite = groundSprites[idx];
+            CreateBlock(root.transform, sprite, new Vector3(x, -3f, 0f), true);
+            CreateBlock(root.transform, sprite, new Vector3(x, -4f, 0f), true);
         }
     }
 
-    private static void BuildPlatformsIfMissing(Transform geometryRoot, Sprite groundSprite)
+    private static void BuildPlatformsIfMissing(Transform geometryRoot, Sprite[] groundSprites)
     {
         if (geometryRoot.Find("Platforms") != null)
         {
@@ -3004,7 +3466,7 @@ public static class GenerateCorePrefabs2D
                 int segLen = nextCut - prevCut;
                 if (segLen > 0)
                 {
-                    CreatePlatformStrip(root.transform, groundSprite, new Vector3(currentX, y, 0f), segLen);
+                    CreatePlatformStrip(root.transform, groundSprites, new Vector3(currentX, y, 0f), segLen);
                     currentX += segLen;
                 }
                 prevCut = nextCut;
@@ -3052,10 +3514,14 @@ public static class GenerateCorePrefabs2D
         CreateSplitStrip(tier6Y, 50f, 30);
     }
 
-    private static void CreatePlatformStrip(Transform root, Sprite sprite, Vector3 start, int length)
+    private static void CreatePlatformStrip(Transform root, Sprite[] spriteVariants, Vector3 start, int length)
     {
         for (int i = 0; i < length; i++)
         {
+            if (spriteVariants == null || spriteVariants.Length == 0) return;
+            float worldX = start.x + i;
+            int idx = Mathf.Abs(Mathf.RoundToInt(worldX)) % spriteVariants.Length;
+            Sprite sprite = spriteVariants[idx];
             CreateBlock(root, sprite, start + new Vector3(i, 0f, 0f), true);
         }
     }

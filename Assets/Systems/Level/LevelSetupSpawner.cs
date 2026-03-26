@@ -439,7 +439,9 @@ public class LevelSetupSpawner : MonoBehaviour
                 EnemyAI2D enemyAI = spawned != null ? spawned.GetComponent<EnemyAI2D>() : null;
                 if (enemyAI != null)
                 {
-                    enemyAI.ApplyDifficulty(speedMult, damageMult);
+                    // Enemies further from the initial player spawn should aggro earlier/more reliably.
+                    float detectionMult = Mathf.Lerp(1f, 2.2f, Mathf.Pow(difficultyT, 0.6f));
+                    enemyAI.ApplyDifficulty(speedMult, damageMult, detectionMult);
                 }
 
                 // Some enemies shoot back; chance scales with distance too.

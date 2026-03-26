@@ -55,10 +55,43 @@ public class HUDController : MonoBehaviour
         RefreshResources();
         ShowPrompt(string.Empty);
         SetExtractionStatus(string.Empty);
-        SetBiome("Unknown Sector");
+        SetBiome("Jungle");
         SetPauseVisible(false);
 
         EnsureInventoryPauseMenu();
+        ApplyReadableTextStyle();
+    }
+
+    private void ApplyReadableTextStyle()
+    {
+        // Improve legibility over busy bioluminescent backgrounds.
+        StyleText(suitIntegrityLabel);
+        StyleText(oxygenLabel);
+        StyleText(resourcesText);
+        StyleText(biomeLabel);
+        StyleText(promptText);
+        StyleText(extractionStatusText);
+    }
+
+    private static void StyleText(Text text)
+    {
+        if (text == null) return;
+
+        text.fontStyle = FontStyle.Bold;
+        text.color = Color.white;
+        text.resizeTextForBestFit = false;
+
+        Outline outline = text.GetComponent<Outline>();
+        if (outline == null) outline = text.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        outline.useGraphicAlpha = true;
+
+        Shadow shadow = text.GetComponent<Shadow>();
+        if (shadow == null) shadow = text.gameObject.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0f, 0f, 0f, 0.65f);
+        shadow.effectDistance = new Vector2(0.6f, -0.6f);
+        shadow.useGraphicAlpha = true;
     }
 
     private void EnsureInventoryPauseMenu()

@@ -20,6 +20,7 @@ public class EnemyAI2D : MonoBehaviour
     [SerializeField] private float detectionRange = 4f;
     [SerializeField] private float loseTargetRange = 6f;
     [SerializeField] private LayerMask playerLayer;
+    [SerializeField] private bool fallbackToDistanceIfLayerMaskMisconfigured = true;
 
     [Header("Chase")]
     [SerializeField] private float chaseSpeed = 3f;
@@ -39,12 +40,25 @@ public class EnemyAI2D : MonoBehaviour
     // Called by the level spawner to scale enemy difficulty based on distance.
     public void ApplyDifficulty(float speedMultiplier, float damageMultiplier)
     {
+        ApplyDifficulty(speedMultiplier, damageMultiplier, 1f);
+    }
+
+    // Overload for also scaling aggro/detection feel with distance.
+    public void ApplyDifficulty(float speedMultiplier, float damageMultiplier, float detectionRangeMultiplier)
+    {
         speedMultiplier = Mathf.Max(0.01f, speedMultiplier);
         damageMultiplier = Mathf.Max(0.01f, damageMultiplier);
+        detectionRangeMultiplier = Mathf.Max(0.01f, detectionRangeMultiplier);
 
         patrolSpeed *= speedMultiplier;
         chaseSpeed *= speedMultiplier;
         contactDamage *= damageMultiplier;
+
+        detectionRange *= detectionRangeMultiplier;
+
+        // Keep loseTargetRange meaningfully larger than detectionRange.
+        float loseMult = Mathf.Lerp(1.1f, 1.6f, Mathf.Clamp01((detectionRangeMultiplier - 1f) / 1.5f));
+        loseTargetRange *= loseMult;
     }
 
     private void Awake()
@@ -123,8 +137,13 @@ public class EnemyAI2D : MonoBehaviour
         {
             return true;
         }
+        int playerBit = 1 << player.gameObject.layer;
+        bool included = (playerLayer.value & playerBit) != 0;
+        if (included) return true;
 
-        return (playerLayer.value & (1 << player.gameObject.layer)) != 0;
+        // If the mask is misconfigured, enemies would look like "aggro isn't working".
+        // Fallback keeps gameplay robust.
+        return fallbackToDistanceIfLayerMaskMisconfigured;
     }
 
     private void Patrol()

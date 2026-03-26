@@ -19,6 +19,8 @@ public class InventoryDebugDisplay : MonoBehaviour
         {
             StartCoroutine(SubscribeRetry());
         }
+
+        ApplyReadableInventoryStyle();
     }
 
     private void OnDisable()
@@ -81,7 +83,8 @@ public class InventoryDebugDisplay : MonoBehaviour
         Dictionary<string, int> snapshot = InventorySystem.Instance.GetSnapshot();
         if (snapshot.Count == 0)
         {
-            debugText.text = showWhenEmpty ? "Inventory Debug:\n(empty)" : string.Empty;
+            // Don't show a debug header during gameplay.
+            debugText.text = string.Empty;
             return;
         }
 
@@ -92,11 +95,9 @@ public class InventoryDebugDisplay : MonoBehaviour
         }
 
         StringBuilder output = new StringBuilder();
-        output.AppendLine("Inventory Debug:");
         for (int i = 0; i < keys.Count; i++)
         {
             string key = keys[i];
-            output.Append("- ");
             output.Append(key);
             output.Append(": ");
             output.Append(snapshot[key]);
@@ -104,5 +105,24 @@ public class InventoryDebugDisplay : MonoBehaviour
         }
 
         debugText.text = output.ToString().TrimEnd();
+    }
+
+    private void ApplyReadableInventoryStyle()
+    {
+        if (debugText == null) return;
+
+        debugText.fontStyle = FontStyle.Bold;
+        debugText.color = Color.white;
+        debugText.resizeTextForBestFit = false;
+
+        Outline outline = debugText.GetComponent<Outline>();
+        if (outline == null) outline = debugText.gameObject.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.9f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        outline.useGraphicAlpha = true;
+
+        // Avoid additional shadow blur; outline is enough.
+        Shadow shadow = debugText.GetComponent<Shadow>();
+        if (shadow != null) shadow.enabled = false;
     }
 }

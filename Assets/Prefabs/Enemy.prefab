@@ -233,6 +233,7 @@ MonoBehaviour:
   playerLayer:
     serializedVersion: 2
     m_Bits: 0
+  fallbackToDistanceIfLayerMaskMisconfigured: 1
   chaseSpeed: 3
   contactDamage: 10
   contactDamageCooldown: 0.5
