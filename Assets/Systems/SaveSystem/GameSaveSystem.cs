@@ -23,6 +23,7 @@ public static class GameSaveSystem
     private class SaveData
     {
         public string version = SaveVersion;
+        public string saveName;
         public string sceneName;
         public long savedUtcTicks;
 
@@ -39,6 +40,7 @@ public static class GameSaveSystem
     {
         public bool exists;
         public DateTime savedAtUtc;
+        public string saveName;
         public string displayText;
     }
 
@@ -83,6 +85,7 @@ public static class GameSaveSystem
         {
             exists = false,
             savedAtUtc = default,
+            saveName = string.Empty,
             displayText = "Empty"
         };
 
@@ -108,12 +111,74 @@ public static class GameSaveSystem
 
             meta.exists = true;
             meta.savedAtUtc = new DateTime(data.savedUtcTicks, DateTimeKind.Utc);
+            meta.saveName = string.IsNullOrWhiteSpace(data.saveName) ? $"Slot {slotIndex0Based + 1}" : data.saveName.Trim();
             meta.displayText = $"Saved {meta.savedAtUtc.ToLocalTime():yyyy-MM-dd HH:mm}";
             return meta;
         }
         catch
         {
             return meta;
+        }
+    }
+
+    public static bool DeleteSlot(int slotIndex0Based)
+    {
+        int safeSlot = Mathf.Clamp(slotIndex0Based, 0, SlotCount - 1);
+        string path = GetSavePath(safeSlot);
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"DeleteSlot failed for slot {safeSlot}: {e.Message}");
+            return false;
+        }
+    }
+
+    public static bool RenameSlot(int slotIndex0Based, string newName)
+    {
+        int safeSlot = Mathf.Clamp(slotIndex0Based, 0, SlotCount - 1);
+        string path = GetSavePath(safeSlot);
+        if (!File.Exists(path))
+        {
+            return false;
+        }
+
+        string clean = (newName ?? string.Empty).Trim();
+        if (clean.Length > 24) clean = clean.Substring(0, 24).Trim();
+        if (string.IsNullOrWhiteSpace(clean))
+        {
+            clean = $"Slot {safeSlot + 1}";
+        }
+
+        try
+        {
+            string json = File.ReadAllText(path);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return false;
+            }
+
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            if (data == null)
+            {
+                return false;
+            }
+
+            data.saveName = clean;
+            string updated = JsonUtility.ToJson(data, prettyPrint: true);
+            File.WriteAllText(path, updated);
+            return true;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"RenameSlot failed for slot {safeSlot}: {e.Message}");
+            return false;
         }
     }
 
@@ -138,6 +203,7 @@ public static class GameSaveSystem
         data.playerPosition = ps.transform.position;
         data.playerHealth = ps.CurrentHealth;
         data.playerOxygen = ps.CurrentOxygen;
+        data.saveName = GetSlotMeta(safeSlot).saveName;
 
         if (ammo != null)
         {

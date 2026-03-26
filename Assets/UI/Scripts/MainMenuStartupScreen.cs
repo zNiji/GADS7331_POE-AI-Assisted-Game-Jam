@@ -28,6 +28,15 @@ public class MainMenuStartupScreen : MonoBehaviour
     private GameObject newGameButtonGO;
     private static Sprite cachedMenuThemeBackground;
 
+    // Rename/Delete UI
+    private GameObject renamePanel;
+    private InputField renameInput;
+    private Text renamePrompt;
+    private int renameTargetSlot = -1;
+
+    private static Sprite cachedPenIcon;
+    private static Sprite cachedTrashIcon;
+
     private void Awake()
     {
         // Freeze gameplay immediately when the main menu scene loads.
@@ -400,7 +409,8 @@ public class MainMenuStartupScreen : MonoBehaviour
             prt.anchoredPosition = Vector2.zero;
 
             Image img = saveSlotsPanel.GetComponent<Image>();
-            img.color = new Color(0f, 0f, 0f, 0.85f);
+            // Fully opaque background (not see-through).
+            img.color = new Color(0.04f, 0.05f, 0.07f, 1f);
 
             CreateTextChild(saveSlotsPanel.transform, "SaveSlotsTitle", "Choose a save slot", new Vector2(0f, 170f), 38);
 
@@ -448,11 +458,34 @@ public class MainMenuStartupScreen : MonoBehaviour
                 txt.text = "";
 
                 btn.onClick.AddListener(() => LoadSaveSlot(captured));
+
+                // Small icon buttons (inside the panel, right of the slot row)
+                float y = startY + step * i;
+                EnsureActionIcons();
+                Button renameBtn = CreateIconButton(
+                    saveSlotsPanel.transform,
+                    $"RenameSlot{i + 1}Button",
+                    cachedPenIcon,
+                    new Vector2(320f, y),
+                    new Vector2(60f, 60f)
+                );
+                renameBtn.onClick.AddListener(() => OpenRenameSlot(captured));
+
+                Button delBtn = CreateIconButton(
+                    saveSlotsPanel.transform,
+                    $"DeleteSlot{i + 1}Button",
+                    cachedTrashIcon,
+                    new Vector2(395f, y),
+                    new Vector2(60f, 60f)
+                );
+                delBtn.onClick.AddListener(() => DeleteSlot(captured));
             }
 
             // Back button
             Button backBtn = CreatePanelButton(saveSlotsPanel.transform, "BackButton", "Back", new Vector2(0f, -170f), new Vector2(300f, 60f));
             backBtn.onClick.AddListener(CloseSaveSlotsPanel);
+
+            EnsureRenamePanelUI();
         }
 
         saveSlotsPanel.SetActive(false);
@@ -532,8 +565,273 @@ public class MainMenuStartupScreen : MonoBehaviour
             if (label == null) continue;
 
             GameSaveSystem.SaveSlotMeta meta = GameSaveSystem.GetSlotMeta(i);
-            label.text = meta.exists ? $"Saved {meta.displayText}\n(Load Slot {i + 1})" : $"Empty\n(Load Slot {i + 1})";
+            label.text = meta.exists
+                ? $"{meta.saveName}\n{meta.displayText}\n(Load Slot {i + 1})"
+                : $"Empty\n(Load Slot {i + 1})";
+
+            Transform renameT = saveSlotsPanel.transform.Find($"RenameSlot{i + 1}Button");
+            if (renameT != null) renameT.gameObject.SetActive(meta.exists);
+            Transform deleteT = saveSlotsPanel.transform.Find($"DeleteSlot{i + 1}Button");
+            if (deleteT != null) deleteT.gameObject.SetActive(meta.exists);
         }
+    }
+
+    private void DeleteSlot(int slotIndex0Based)
+    {
+        // Simple delete; panel refresh will update button labels.
+        GameSaveSystem.DeleteSlot(slotIndex0Based);
+        RefreshSaveSlotButtonLabels();
+    }
+
+    private void EnsureActionIcons()
+    {
+        if (cachedPenIcon != null && cachedTrashIcon != null) return;
+        cachedPenIcon = CreatePenIconSprite();
+        cachedTrashIcon = CreateTrashIconSprite();
+    }
+
+    private Sprite CreatePenIconSprite()
+    {
+        // 16x16 pixel pen icon (simple, readable).
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color clear = new Color(0, 0, 0, 0);
+        Color body = new Color(0.9f, 0.9f, 0.95f, 1f);
+        Color accent = new Color(0.25f, 1f, 0.55f, 1f);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                tex.SetPixel(x, y, clear);
+            }
+        }
+
+        // Diagonal pen body
+        for (int i = 0; i < 9; i++)
+        {
+            int x = 4 + i;
+            int y = 4 + i;
+            if (x < 0 || x >= size || y < 0 || y >= size) continue;
+            tex.SetPixel(x, y, body);
+            if (x + 1 < size) tex.SetPixel(x + 1, y, body);
+        }
+        // Tip
+        tex.SetPixel(13, 13, accent);
+        tex.SetPixel(14, 14, accent);
+        tex.SetPixel(14, 13, accent);
+
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
+    }
+
+    private Sprite CreateTrashIconSprite()
+    {
+        int size = 16;
+        Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+
+        Color clear = new Color(0, 0, 0, 0);
+        Color body = new Color(0.9f, 0.9f, 0.95f, 1f);
+        Color accent = new Color(1f, 0.35f, 0.35f, 1f);
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                tex.SetPixel(x, y, clear);
+            }
+        }
+
+        // Bin body
+        for (int y = 4; y <= 13; y++)
+        {
+            for (int x = 5; x <= 11; x++)
+            {
+                bool edge = (x == 5 || x == 11 || y == 4 || y == 13);
+                tex.SetPixel(x, y, edge ? body : new Color(body.r, body.g, body.b, 0.85f));
+            }
+        }
+        // Lid + handle
+        for (int x = 4; x <= 12; x++) tex.SetPixel(x, 14, body);
+        tex.SetPixel(7, 15, accent);
+        tex.SetPixel(8, 15, accent);
+        tex.SetPixel(9, 15, accent);
+
+        // Inner slats
+        for (int y = 6; y <= 12; y++)
+        {
+            tex.SetPixel(7, y, new Color(0.12f, 0.14f, 0.18f, 1f));
+            tex.SetPixel(9, y, new Color(0.12f, 0.14f, 0.18f, 1f));
+        }
+
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 16f);
+    }
+
+    private Button CreateIconButton(Transform parent, string name, Sprite icon, Vector2 anchoredPos, Vector2 size)
+    {
+        GameObject buttonGO = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+        buttonGO.transform.SetParent(parent, false);
+
+        RectTransform rt = buttonGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = anchoredPos;
+        rt.sizeDelta = size;
+
+        Image bg = buttonGO.GetComponent<Image>();
+        bg.color = new Color(0.18f, 0.24f, 0.32f, 1f);
+
+        Button btn = buttonGO.GetComponent<Button>();
+        ColorBlock cb = btn.colors;
+        cb.normalColor = bg.color;
+        cb.highlightedColor = new Color(0.26f, 0.34f, 0.46f, 1f);
+        cb.pressedColor = new Color(0.14f, 0.2f, 0.28f, 1f);
+        btn.colors = cb;
+
+        GameObject iconGO = new GameObject("Icon", typeof(RectTransform), typeof(Image));
+        iconGO.transform.SetParent(buttonGO.transform, false);
+        RectTransform irt = iconGO.GetComponent<RectTransform>();
+        irt.anchorMin = new Vector2(0.5f, 0.5f);
+        irt.anchorMax = new Vector2(0.5f, 0.5f);
+        irt.pivot = new Vector2(0.5f, 0.5f);
+        irt.anchoredPosition = Vector2.zero;
+        irt.sizeDelta = new Vector2(size.x * 0.62f, size.y * 0.62f);
+
+        Image iimg = iconGO.GetComponent<Image>();
+        iimg.sprite = icon;
+        iimg.color = Color.white;
+        iimg.preserveAspect = true;
+
+        return btn;
+    }
+
+    private void EnsureRenamePanelUI()
+    {
+        if (saveSlotsPanel == null) return;
+        if (renamePanel != null) return;
+
+        renamePanel = new GameObject("RenamePanel", typeof(RectTransform), typeof(Image));
+        renamePanel.transform.SetParent(saveSlotsPanel.transform, false);
+        RectTransform rt = renamePanel.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = new Vector2(820f, 240f);
+        rt.anchoredPosition = Vector2.zero;
+
+        Image img = renamePanel.GetComponent<Image>();
+        img.color = new Color(0f, 0f, 0f, 0.9f);
+
+        // Prompt
+        GameObject promptGO = new GameObject("Prompt", typeof(RectTransform), typeof(Text));
+        promptGO.transform.SetParent(renamePanel.transform, false);
+        RectTransform prt = promptGO.GetComponent<RectTransform>();
+        prt.anchorMin = new Vector2(0.5f, 1f);
+        prt.anchorMax = new Vector2(0.5f, 1f);
+        prt.pivot = new Vector2(0.5f, 1f);
+        prt.anchoredPosition = new Vector2(0f, -20f);
+        prt.sizeDelta = new Vector2(780f, 70f);
+        renamePrompt = promptGO.GetComponent<Text>();
+        renamePrompt.font = GetSafeFont();
+        renamePrompt.fontSize = 30;
+        renamePrompt.color = Color.white;
+        renamePrompt.alignment = TextAnchor.UpperCenter;
+        renamePrompt.text = "Rename save";
+
+        // InputField container
+        GameObject inputGO = new GameObject("RenameInput", typeof(RectTransform), typeof(Image), typeof(InputField));
+        inputGO.transform.SetParent(renamePanel.transform, false);
+        RectTransform irt = inputGO.GetComponent<RectTransform>();
+        irt.anchorMin = new Vector2(0.5f, 0.5f);
+        irt.anchorMax = new Vector2(0.5f, 0.5f);
+        irt.pivot = new Vector2(0.5f, 0.5f);
+        irt.anchoredPosition = new Vector2(0f, 10f);
+        irt.sizeDelta = new Vector2(640f, 62f);
+        Image iimg = inputGO.GetComponent<Image>();
+        iimg.color = new Color(0.12f, 0.16f, 0.22f, 1f);
+
+        // Input text
+        GameObject textGO = new GameObject("Text", typeof(RectTransform), typeof(Text));
+        textGO.transform.SetParent(inputGO.transform, false);
+        RectTransform trt = textGO.GetComponent<RectTransform>();
+        trt.anchorMin = Vector2.zero;
+        trt.anchorMax = Vector2.one;
+        trt.offsetMin = new Vector2(12f, 8f);
+        trt.offsetMax = new Vector2(-12f, -8f);
+        Text inputText = textGO.GetComponent<Text>();
+        inputText.font = GetSafeFont();
+        inputText.fontSize = 26;
+        inputText.color = Color.white;
+        inputText.alignment = TextAnchor.MiddleLeft;
+        inputText.text = "";
+
+        // Placeholder
+        GameObject placeholderGO = new GameObject("Placeholder", typeof(RectTransform), typeof(Text));
+        placeholderGO.transform.SetParent(inputGO.transform, false);
+        RectTransform phrt = placeholderGO.GetComponent<RectTransform>();
+        phrt.anchorMin = Vector2.zero;
+        phrt.anchorMax = Vector2.one;
+        phrt.offsetMin = new Vector2(12f, 8f);
+        phrt.offsetMax = new Vector2(-12f, -8f);
+        Text placeholderText = placeholderGO.GetComponent<Text>();
+        placeholderText.font = GetSafeFont();
+        placeholderText.fontSize = 26;
+        placeholderText.color = new Color(1f, 1f, 1f, 0.55f);
+        placeholderText.alignment = TextAnchor.MiddleLeft;
+        placeholderText.text = "Enter new name (max 24)";
+
+        renameInput = inputGO.GetComponent<InputField>();
+        renameInput.textComponent = inputText;
+        renameInput.placeholder = placeholderText;
+        renameInput.characterLimit = 24;
+
+        Button okBtn = CreatePanelButton(renamePanel.transform, "RenameOkButton", "OK", new Vector2(-120f, -80f), new Vector2(240f, 60f));
+        okBtn.onClick.AddListener(ConfirmRename);
+        Button cancelBtn = CreatePanelButton(renamePanel.transform, "RenameCancelButton", "Cancel", new Vector2(120f, -80f), new Vector2(240f, 60f));
+        cancelBtn.onClick.AddListener(CloseRenamePanel);
+
+        renamePanel.SetActive(false);
+        ApplyThemeToButtonsIn(renamePanel.transform);
+    }
+
+    private void OpenRenameSlot(int slotIndex0Based)
+    {
+        EnsureRenamePanelUI();
+        renameTargetSlot = slotIndex0Based;
+
+        GameSaveSystem.SaveSlotMeta meta = GameSaveSystem.GetSlotMeta(slotIndex0Based);
+        if (renamePrompt != null)
+        {
+            renamePrompt.text = $"Rename Slot {slotIndex0Based + 1}";
+        }
+        if (renameInput != null)
+        {
+            renameInput.text = meta.exists ? meta.saveName : string.Empty;
+        }
+
+        if (renamePanel != null) renamePanel.SetActive(true);
+    }
+
+    private void CloseRenamePanel()
+    {
+        renameTargetSlot = -1;
+        if (renamePanel != null) renamePanel.SetActive(false);
+    }
+
+    private void ConfirmRename()
+    {
+        if (renameTargetSlot < 0) { CloseRenamePanel(); return; }
+        string newName = renameInput != null ? renameInput.text : string.Empty;
+        GameSaveSystem.RenameSlot(renameTargetSlot, newName);
+        CloseRenamePanel();
+        RefreshSaveSlotButtonLabels();
     }
 
     private void CreateTextChild(Transform parent, string name, string text, Vector2 anchoredPos, int fontSize)
