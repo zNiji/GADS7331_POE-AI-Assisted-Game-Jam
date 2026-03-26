@@ -210,13 +210,20 @@ MonoBehaviour:
   zenithMinDifficultyT: 0.75
   spawnOnStart: 1
   clearSpawnedOnRespawn: 1
+  blockEnemiesOnGroundFloor: 1
+  forceIronOnGroundFloor: 1
+  groundFloorIronNodesMin: 3
+  groundFloorIronNodesMax: 6
+  groundFloorYBand: 0.65
+  groundFloorIronAvoidRadius: 1.1
+  groundFloorIronSpawnAttempts: 80
   minDifficultyDistance: 0
   maxDifficultyDistance: 90
-  minEnemyHealthMultiplier: 1.5
+  minEnemyHealthMultiplier: 0.9
   maxEnemyHealthMultiplier: 4.2
   minEnemySpeedMultiplier: 1.05
   maxEnemySpeedMultiplier: 1.85
-  minEnemyDamageMultiplier: 1.25
+  minEnemyDamageMultiplier: 1
   maxEnemyDamageMultiplier: 2.8
   minShooterChance: 0.08
   maxShooterChance: 0.45

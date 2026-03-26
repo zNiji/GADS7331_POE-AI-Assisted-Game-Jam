@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -140,18 +141,40 @@ public class GameManager : MonoBehaviour
         LoadingOverlayUI.Hide();
     }
 
+    private static bool TryGetActiveScenePlayerSpawn(out Transform spawn)
+    {
+        spawn = null;
+        GameObject spawnGo = GameObject.Find("PlayerSpawn");
+        if (spawnGo == null)
+        {
+            return false;
+        }
+
+        // Ignore stale DontDestroyOnLoad spawns.
+        Scene active = SceneManager.GetActiveScene();
+        if (spawnGo.scene != active)
+        {
+            return false;
+        }
+
+        spawn = spawnGo.transform;
+        return spawn != null;
+    }
+
     private void RefreshPlayerSpawnPosition()
     {
-        if (playerSpawnPoint != null)
+        // Always prefer the active scene's PlayerSpawn over serialized references,
+        // because this GameManager persists across scenes and references can go stale.
+        if (TryGetActiveScenePlayerSpawn(out Transform activeSpawn))
         {
-            cachedPlayerSpawnPosition = playerSpawnPoint.position;
+            playerSpawnPoint = activeSpawn;
+            cachedPlayerSpawnPosition = activeSpawn.position;
             return;
         }
 
-        GameObject spawnGo = GameObject.Find("PlayerSpawn");
-        if (spawnGo != null)
+        if (playerSpawnPoint != null)
         {
-            cachedPlayerSpawnPosition = spawnGo.transform.position;
+            cachedPlayerSpawnPosition = playerSpawnPoint.position;
         }
     }
 
@@ -431,10 +454,10 @@ public class GameManager : MonoBehaviour
             // Always prefer the current scene's PlayerSpawn object; cached/serialized
             // references can go stale across runs and scene reloads.
             Vector3 spawnPos = cachedPlayerSpawnPosition;
-            GameObject spawnGo = GameObject.Find("PlayerSpawn");
-            if (spawnGo != null)
+            if (TryGetActiveScenePlayerSpawn(out Transform activeSpawn))
             {
-                spawnPos = spawnGo.transform.position;
+                playerSpawnPoint = activeSpawn;
+                spawnPos = activeSpawn.position;
                 cachedPlayerSpawnPosition = spawnPos;
             }
             else if (playerSpawnPoint != null)

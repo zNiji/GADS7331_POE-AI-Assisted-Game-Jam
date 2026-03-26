@@ -25,15 +25,25 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private bool spawnOnStart = true;
     [SerializeField] private bool clearSpawnedOnRespawn = true;
 
+    [Header("Ground Floor Rules (spawn strip)")]
+    [SerializeField] private bool blockEnemiesOnGroundFloor = true;
+    [SerializeField] private bool forceIronOnGroundFloor = true;
+    [SerializeField] private int groundFloorIronNodesMin = 3;
+    [SerializeField] private int groundFloorIronNodesMax = 6;
+    [SerializeField] private float groundFloorYBand = 0.65f;
+    [SerializeField] private float groundFloorIronAvoidRadius = 1.1f;
+    [SerializeField] private int groundFloorIronSpawnAttempts = 80;
+
     [Header("Difficulty Scaling (distance from PlayerSpawn)")]
     [SerializeField] private float minDifficultyDistance = 0f;
     [SerializeField] private float maxDifficultyDistance = 90f;
 
-    [SerializeField] private float minEnemyHealthMultiplier = 1.5f;
+    // Start area enemies were feeling too strong; keep early tiers softer.
+    [SerializeField] private float minEnemyHealthMultiplier = 0.9f;
     [SerializeField] private float maxEnemyHealthMultiplier = 4.2f;
     [SerializeField] private float minEnemySpeedMultiplier = 1.05f;
     [SerializeField] private float maxEnemySpeedMultiplier = 1.85f;
-    [SerializeField] private float minEnemyDamageMultiplier = 1.25f;
+    [SerializeField] private float minEnemyDamageMultiplier = 1.0f;
     [SerializeField] private float maxEnemyDamageMultiplier = 2.8f;
 
     [SerializeField] private float minShooterChance = 0.08f;
@@ -86,6 +96,11 @@ public class LevelSetupSpawner : MonoBehaviour
     [SerializeField] private Transform spawnedEnemiesRoot;
     [SerializeField] private Transform spawnedResourcesRoot;
 
+    private float groundFloorY;
+    private bool hasGroundFloorY;
+    private int groundFloorIronTarget;
+    private int groundFloorIronSpawned;
+
     private void Start()
     {
         // GameManager handles spawning after scene load (and after save-load reapply).
@@ -98,6 +113,10 @@ public class LevelSetupSpawner : MonoBehaviour
 
     public void SpawnAll()
     {
+        groundFloorIronTarget = Mathf.Clamp(Random.Range(groundFloorIronNodesMin, groundFloorIronNodesMax + 1), 0, 999);
+        groundFloorIronSpawned = 0;
+        CacheGroundFloorY();
+
         if (clearSpawnedOnRespawn)
         {
             ClearChildren(spawnedEnemiesRoot);
@@ -108,6 +127,93 @@ public class LevelSetupSpawner : MonoBehaviour
         SpawnByType(SpawnPoint2D.SpawnType.Resource, resourceNodePrefab, spawnedResourcesRoot);
 
         SpawnOxygenPickupsIfNeeded();
+        EnsureGroundFloorIronNodes();
+    }
+
+    private void CacheGroundFloorY()
+    {
+        hasGroundFloorY = false;
+
+        int groundLayer = LayerMask.NameToLayer("Ground");
+        if (groundLayer < 0) return;
+        LayerMask mask = 1 << groundLayer;
+
+        Vector3 spawnPos = GetPlayerSpawnPosition();
+        Vector2 origin = new Vector2(spawnPos.x, spawnPos.y + 12f);
+        RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, 60f, mask);
+        if (!hit.collider) return;
+
+        groundFloorY = hit.point.y;
+        hasGroundFloorY = true;
+    }
+
+    private bool IsOnGroundFloor(Vector3 worldPos)
+    {
+        if (!hasGroundFloorY) return false;
+        return Mathf.Abs(worldPos.y - groundFloorY) <= Mathf.Max(0.05f, groundFloorYBand);
+    }
+
+    private void EnsureGroundFloorIronNodes()
+    {
+        if (!forceIronOnGroundFloor) return;
+        if (!hasGroundFloorY) return;
+        if (resourceNodePrefab == null) return;
+        if (groundFloorIronTarget <= 0) return;
+
+        // Collect existing resource nodes on the ground floor.
+        List<Vector3> occupied = new List<Vector3>();
+        ResourceNode[] nodes = FindObjectsByType<ResourceNode>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            if (nodes[i] == null) continue;
+            if (IsOnGroundFloor(nodes[i].transform.position))
+            {
+                occupied.Add(nodes[i].transform.position);
+            }
+        }
+
+        // We already forced some spawnpoints to Iron; count them.
+        groundFloorIronSpawned = occupied.Count;
+        if (groundFloorIronSpawned >= groundFloorIronTarget) return;
+
+        // Candidate positions: any spawnpoint on the ground floor (enemy or resource).
+        SpawnPoint2D[] points = FindObjectsByType<SpawnPoint2D>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        List<Vector3> candidates = new List<Vector3>();
+        for (int i = 0; i < points.Length; i++)
+        {
+            if (points[i] == null) continue;
+            if (!IsOnGroundFloor(points[i].transform.position)) continue;
+            candidates.Add(points[i].transform.position);
+        }
+
+        if (candidates.Count == 0) return;
+
+        for (int attempt = 0; attempt < groundFloorIronSpawnAttempts && groundFloorIronSpawned < groundFloorIronTarget; attempt++)
+        {
+            Vector3 pick = candidates[Random.Range(0, candidates.Count)];
+
+            bool tooClose = false;
+            for (int j = 0; j < occupied.Count; j++)
+            {
+                if (Vector3.Distance(pick, occupied[j]) <= groundFloorIronAvoidRadius)
+                {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (tooClose) continue;
+
+            GameObject spawned = Instantiate(resourceNodePrefab, pick, Quaternion.identity, spawnedResourcesRoot != null ? spawnedResourcesRoot : transform);
+            ResourceNode node = spawned != null ? spawned.GetComponent<ResourceNode>() : null;
+            if (node != null)
+            {
+                node.SetResourceId(defaultResourceId);
+                node.ApplyDifficulty(1f, 1f);
+            }
+
+            occupied.Add(pick);
+            groundFloorIronSpawned++;
+        }
     }
 
     private void SpawnOxygenPickupsIfNeeded()
@@ -434,6 +540,18 @@ public class LevelSetupSpawner : MonoBehaviour
                 continue;
             }
 
+            // Special-case: bottom-most layer resource spawns should always generate ore
+            // (and should not be capped/destroyed by the "ground floor iron target" rules).
+            bool isBottomHint = point.gameObject.name.ToLowerInvariant().Contains("_bottom_")
+                || (!string.IsNullOrWhiteSpace(point.SpawnId) && point.SpawnId.ToLowerInvariant().Contains("_bottom_"));
+
+            // Ground floor rule: no enemies on the spawn strip.
+            // Also block any enemies that somehow end up tagged/placed on the bottom-most layer.
+            if (type == SpawnPoint2D.SpawnType.Enemy && (isBottomHint || (blockEnemiesOnGroundFloor && IsOnGroundFloor(point.transform.position))))
+            {
+                continue;
+            }
+
             if (spawnedEnemyPositions != null)
             {
                 Vector3 p = point.transform.position;
@@ -461,6 +579,28 @@ public class LevelSetupSpawner : MonoBehaviour
                 ResourceNode node = spawned != null ? spawned.GetComponent<ResourceNode>() : null;
                 if (node != null)
                 {
+                    // Ground floor rule: force a few Iron nodes (and prevent rarer ores on the spawn strip).
+                    if (isBottomHint)
+                    {
+                        node.SetResourceId(defaultResourceId);
+                        node.ApplyDifficulty(1f, 1f);
+                        continue;
+                    }
+
+                    if (forceIronOnGroundFloor && IsOnGroundFloor(point.transform.position))
+                    {
+                        if (groundFloorIronSpawned >= groundFloorIronTarget)
+                        {
+                            if (spawned != null) Destroy(spawned);
+                            continue;
+                        }
+
+                        groundFloorIronSpawned++;
+                        node.SetResourceId(defaultResourceId);
+                        node.ApplyDifficulty(1f, 1f);
+                        continue;
+                    }
+
                     string resourceId = (zenithPoint != null && point == zenithPoint)
                         ? zenithResourceId
                         : DetermineResourceId(point);
@@ -505,14 +645,15 @@ public class LevelSetupSpawner : MonoBehaviour
                 // after only a small number of damage upgrades.
                 // Health scaling: aggressively ramp with tier distance.
                 // Goal: high-tier enemies survive ~20+ player shots at low upgrade tiers.
-                float healthCurveT = Mathf.Pow(difficultyT, 1.2f);
+                // Soften early tiers while keeping high tiers tough.
+                float healthCurveT = Mathf.Pow(difficultyT, 1.85f);
                 float healthMult = Mathf.Lerp(minEnemyHealthMultiplier, maxEnemyHealthMultiplier, healthCurveT);
                 // Extra boost (peaks high): makes far enemies dramatically tougher.
-                healthMult *= Mathf.Lerp(1f, 9f, Mathf.Pow(difficultyT, 0.7f));
+                healthMult *= Mathf.Lerp(1f, 9f, Mathf.Pow(difficultyT, 1.15f));
                 float speedMult = Mathf.Lerp(minEnemySpeedMultiplier, maxEnemySpeedMultiplier, difficultyT);
-                float damageMult = Mathf.Lerp(minEnemyDamageMultiplier, maxEnemyDamageMultiplier, Mathf.Pow(difficultyT, 0.9f));
+                float damageMult = Mathf.Lerp(minEnemyDamageMultiplier, maxEnemyDamageMultiplier, Mathf.Pow(difficultyT, 1.05f));
                 // Extra damage ramp (stronger at high tiers).
-                damageMult *= Mathf.Lerp(1f, 2.0f, Mathf.Pow(difficultyT, 1.15f));
+                damageMult *= Mathf.Lerp(1f, 2.0f, Mathf.Pow(difficultyT, 1.6f));
 
                 EnemyHealth enemyHealth = spawned != null ? spawned.GetComponent<EnemyHealth>() : null;
                 if (enemyHealth != null)
@@ -574,8 +715,8 @@ public class LevelSetupSpawner : MonoBehaviour
     {
         float distance = Vector3.Distance(spawnPointPos, playerSpawnPos);
         float t = Mathf.Clamp01(Mathf.InverseLerp(minDifficultyDistance, maxDifficultyDistance, distance));
-        // Warp the curve so mid tiers are meaningfully harder (fewer "easy" mid spawns).
-        return Mathf.Pow(t, 0.75f);
+        // Keep early game easier, but still allow strong ramp later.
+        return Mathf.Pow(t, 1.05f);
     }
 
     private Vector3 GetPlayerSpawnPosition()

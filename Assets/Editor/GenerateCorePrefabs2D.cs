@@ -288,7 +288,9 @@ public static class GenerateCorePrefabs2D
                     GameObject spawnGo = new GameObject("PlayerSpawn");
                     spawn = spawnGo.transform;
                     spawn.position = player.transform.position;
-                    spawn.SetParent(systems != null ? systems.transform : null);
+                    // Keep the spawn point in the active scene, not under persistent systems.
+                    // Otherwise respawn can use a stale DontDestroyOnLoad transform across runs/scenes.
+                    spawn.SetParent(null);
                     Undo.RegisterCreatedObjectUndo(spawnGo, "Create PlayerSpawn");
                 }
 
@@ -480,7 +482,11 @@ public static class GenerateCorePrefabs2D
         SpawnOxygenPickups(levelRoot.transform, spawnPointsRoot);
         PositionPlayerAtSpawn();
 
-        EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
+        // Persist the generated level into the actual scene asset so Play Mode
+        // (which reloads Level_01 from disk) uses the newly generated layout.
+        var activeScene = SceneManager.GetActiveScene();
+        EditorSceneManager.MarkSceneDirty(activeScene);
+        EditorSceneManager.SaveScene(activeScene);
         Selection.activeObject = levelRoot;
         Debug.Log("Playable test level created: ground/platforms, spawn points, and camera follow ready.");
     }
@@ -521,6 +527,14 @@ public static class GenerateCorePrefabs2D
 
             float surfaceY = hit.point.y;
             float yOffset = sp.Type == SpawnPoint2D.SpawnType.Resource ? 0.5f : 0.6f;
+
+            // Avoid snapping a tier spawn all the way down to the bottom-most ground layer.
+            // This was causing "bottom layer" enemies/resources when the spawn X wasn't over a platform segment.
+            float maxSnapDownDistance = 2.4f;
+            if ((pos.y - surfaceY) > maxSnapDownDistance && !sp.name.ToLowerInvariant().Contains("_bottom_"))
+            {
+                continue;
+            }
 
             sp.transform.position = new Vector3(pos.x, surfaceY + yOffset, pos.z);
         }
@@ -3628,21 +3642,17 @@ public static class GenerateCorePrefabs2D
             int segCount = UnityEngine.Random.Range(3, 6); // 3..5 (inclusive)
             segCount = Mathf.Clamp(segCount, 3, length);
 
-            // Occasionally shorten the whole strip a bit so segments are smaller overall.
-            int adjustedLength = length;
-            if (length >= 12 && UnityEngine.Random.value < 0.55f)
-            {
-                float scale = UnityEngine.Random.Range(0.75f, 0.92f);
-                adjustedLength = Mathf.Clamp(Mathf.RoundToInt(length * scale), segCount, length);
-            }
-
             // Split into N parts (each part at least 1 block) by choosing random cut points.
-            // Cuts are in [1..adjustedLength-1], sorted, and define segment sizes.
+            // Cuts are in [1..length-1], sorted, and define segment sizes.
+            //
+            // NOTE: We do NOT shorten strips anymore.
+            // Shortened strips leave empty air at the strip ends, which causes spawn points
+            // (and therefore ores) to appear "floating" with no platform beneath them.
             int cutCount = segCount - 1;
             System.Collections.Generic.HashSet<int> cutSet = new System.Collections.Generic.HashSet<int>();
             while (cutSet.Count < cutCount)
             {
-                int cut = UnityEngine.Random.Range(1, adjustedLength); // max exclusive
+                int cut = UnityEngine.Random.Range(1, length); // max exclusive
                 cutSet.Add(cut);
             }
 
@@ -3654,7 +3664,7 @@ public static class GenerateCorePrefabs2D
             int prevCut = 0;
             for (int i = 0; i < segCount; i++)
             {
-                int nextCut = (i < cutCount) ? cuts[i] : adjustedLength;
+                int nextCut = (i < cutCount) ? cuts[i] : length;
                 int segLen = nextCut - prevCut;
                 if (segLen > 0)
                 {
@@ -3666,44 +3676,74 @@ public static class GenerateCorePrefabs2D
         }
 
         // Tier 1 (0) - split each original long strip into smaller segments.
-        CreateSplitStrip(tier1Y, -95f, 45);  // -95..-51
-        CreateSplitStrip(tier1Y, -45f, 40);  // -45..-6
-        CreateSplitStrip(tier1Y, -5f, 35);   // -5..29
-        CreateSplitStrip(tier1Y, 35f, 35);   // 35..69
-        CreateSplitStrip(tier1Y, 75f, 25);   // 75..99
+        // Extend out to the edges so the sides aren't empty, but vary the edge lengths per tier
+        // so the silhouette isn't perfectly uniform.
+        CreateSplitStrip(tier1Y, -140f, 26); // -140..-115
+        CreateSplitStrip(tier1Y, -104f, 32); // -104..-73
+        CreateSplitStrip(tier1Y, -64f, 26);  // -64..-39
+        CreateSplitStrip(tier1Y, -30f, 22);  // -30..-9
+        CreateSplitStrip(tier1Y, 2f, 24);    // 2..25
+        CreateSplitStrip(tier1Y, 36f, 28);   // 36..63
+        CreateSplitStrip(tier1Y, 76f, 26);   // 76..101
+        CreateSplitStrip(tier1Y, 112f, 24);  // 112..135
 
         // Tier 2 (3)
-        CreateSplitStrip(tier2Y, -110f, 35);
-        CreateSplitStrip(tier2Y, -60f, 35);
-        CreateSplitStrip(tier2Y, -10f, 30);
-        CreateSplitStrip(tier2Y, 35f, 25);
-        CreateSplitStrip(tier2Y, 70f, 40);
+        CreateSplitStrip(tier2Y, -136f, 22);
+        CreateSplitStrip(tier2Y, -106f, 28);
+        CreateSplitStrip(tier2Y, -68f, 24);
+        CreateSplitStrip(tier2Y, -34f, 22);
+        CreateSplitStrip(tier2Y, -2f, 24);
+        CreateSplitStrip(tier2Y, 30f, 26);
+        CreateSplitStrip(tier2Y, 68f, 24);
+        CreateSplitStrip(tier2Y, 102f, 22);
+        CreateSplitStrip(tier2Y, 126f, 14);
 
         // Tier 3 (6)
-        CreateSplitStrip(tier3Y, -120f, 40);
-        CreateSplitStrip(tier3Y, -65f, 35);
-        CreateSplitStrip(tier3Y, -20f, 30);
-        CreateSplitStrip(tier3Y, 25f, 30);
-        CreateSplitStrip(tier3Y, 70f, 35);
+        CreateSplitStrip(tier3Y, -132f, 20);
+        CreateSplitStrip(tier3Y, -104f, 26);
+        CreateSplitStrip(tier3Y, -66f, 22);
+        CreateSplitStrip(tier3Y, -36f, 18);
+        CreateSplitStrip(tier3Y, -8f, 22);
+        CreateSplitStrip(tier3Y, 22f, 20);
+        CreateSplitStrip(tier3Y, 54f, 22);
+        CreateSplitStrip(tier3Y, 86f, 20);
+        CreateSplitStrip(tier3Y, 112f, 22);
 
         // Tier 4 (9)
-        CreateSplitStrip(tier4Y, -105f, 45);
-        CreateSplitStrip(tier4Y, -50f, 35);
-        CreateSplitStrip(tier4Y, 0f, 35);
-        CreateSplitStrip(tier4Y, 45f, 25);
-        CreateSplitStrip(tier4Y, 80f, 25);
+        CreateSplitStrip(tier4Y, -138f, 18);
+        CreateSplitStrip(tier4Y, -112f, 24);
+        CreateSplitStrip(tier4Y, -78f, 20);
+        CreateSplitStrip(tier4Y, -50f, 22);
+        CreateSplitStrip(tier4Y, -18f, 18);
+        CreateSplitStrip(tier4Y, 10f, 22);
+        CreateSplitStrip(tier4Y, 40f, 20);
+        CreateSplitStrip(tier4Y, 70f, 22);
+        CreateSplitStrip(tier4Y, 102f, 20);
+        CreateSplitStrip(tier4Y, 126f, 14);
 
         // Tier 5 (12) - fewer, smaller exploratory platforms.
-        CreateSplitStrip(tier5Y, -120f, 40);
-        CreateSplitStrip(tier5Y, -70f, 35);
-        CreateSplitStrip(tier5Y, -20f, 35);
-        CreateSplitStrip(tier5Y, 30f, 35);
+        CreateSplitStrip(tier5Y, -130f, 18);
+        CreateSplitStrip(tier5Y, -104f, 22);
+        CreateSplitStrip(tier5Y, -72f, 18);
+        CreateSplitStrip(tier5Y, -44f, 20);
+        CreateSplitStrip(tier5Y, -14f, 18);
+        CreateSplitStrip(tier5Y, 14f, 20);
+        CreateSplitStrip(tier5Y, 44f, 18);
+        CreateSplitStrip(tier5Y, 72f, 20);
+        CreateSplitStrip(tier5Y, 102f, 18);
+        CreateSplitStrip(tier5Y, 124f, 14);
 
         // Tier 6 (15)
-        CreateSplitStrip(tier6Y, -110f, 35);
-        CreateSplitStrip(tier6Y, -55f, 30);
-        CreateSplitStrip(tier6Y, 0f, 30);
-        CreateSplitStrip(tier6Y, 50f, 30);
+        CreateSplitStrip(tier6Y, -134f, 16);
+        CreateSplitStrip(tier6Y, -110f, 22);
+        CreateSplitStrip(tier6Y, -78f, 18);
+        CreateSplitStrip(tier6Y, -50f, 20);
+        CreateSplitStrip(tier6Y, -20f, 18);
+        CreateSplitStrip(tier6Y, 8f, 20);
+        CreateSplitStrip(tier6Y, 38f, 18);
+        CreateSplitStrip(tier6Y, 66f, 20);
+        CreateSplitStrip(tier6Y, 96f, 18);
+        CreateSplitStrip(tier6Y, 118f, 16);
     }
 
     private static void CreatePlatformStrip(Transform root, Sprite[] spriteVariants, Vector3 start, int length)
@@ -3750,6 +3790,39 @@ public static class GenerateCorePrefabs2D
         int enemyIndex = 0;
         int oreIndex = 0;
 
+        // Bottom-most layer (ground row) was previously bare.
+        // Add a handful of resource spawn points close to the ground, spread across the full width.
+        // No enemies here (player starts on/near this layer).
+        {
+            float bottomSpawnY = -2.0f; // will be snapped onto ground surface by SnapSpawnPointsToGround()
+            int bottomOreMin = 10;
+            int bottomOreMax = 16;
+            int bottomOreCount = UnityEngine.Random.Range(bottomOreMin, bottomOreMax + 1);
+
+            float bottomXMin = -125f;
+            float bottomXMax = 125f;
+            float avoidPlayerSpawnRadiusX = 14f;
+
+            for (int i = 0; i < bottomOreCount; i++)
+            {
+                float x;
+                int guard = 0;
+                do
+                {
+                    x = UnityEngine.Random.Range(bottomXMin, bottomXMax);
+                    guard++;
+                }
+                while (Mathf.Abs(x) < avoidPlayerSpawnRadiusX && guard < 20);
+
+                CreateSpawnPoint(
+                    spawnPointsRoot,
+                    "ResourceSpawn_Iron_Bottom_" + (oreIndex++).ToString(),
+                    new Vector3(x, bottomSpawnY, 0f),
+                    SpawnPoint2D.SpawnType.Resource
+                );
+            }
+        }
+
         void SpawnStripSpawns(
             string tierTag,
             float yEnemy,
@@ -3758,13 +3831,13 @@ public static class GenerateCorePrefabs2D
             float stripXMax,
             bool crystalForThisStrip)
         {
-            // Extremely rare ore: should appear far less often than Crystal.
+            // Extremely rare ore: tune rarity by tier.
             float uraniumChance = 0f;
-            if (tierTag.StartsWith("T2")) uraniumChance = 0.005f;
-            else if (tierTag.StartsWith("T3")) uraniumChance = 0.015f;
-            else if (tierTag.StartsWith("T4")) uraniumChance = 0.03f;
-            else if (tierTag.StartsWith("T5")) uraniumChance = 0.06f;
-            else if (tierTag.StartsWith("T6")) uraniumChance = 0.10f;
+            if (tierTag.StartsWith("T2")) uraniumChance = 0.01f;
+            else if (tierTag.StartsWith("T3")) uraniumChance = 0.03f;
+            else if (tierTag.StartsWith("T4")) uraniumChance = 0.06f;
+            else if (tierTag.StartsWith("T5")) uraniumChance = 0.12f;
+            else if (tierTag.StartsWith("T6")) uraniumChance = 0.18f;
 
             bool uraniumPlacedThisStrip = false;
 
@@ -3796,7 +3869,15 @@ public static class GenerateCorePrefabs2D
                 }
                 else
                 {
-                    resourceName = crystalForThisStrip ? "ResourceSpawn_Crystal_" : "ResourceSpawn_Iron_";
+                    // Bias towards Iron overall; crystals are less common than before.
+                    if (crystalForThisStrip && UnityEngine.Random.value < 0.55f)
+                    {
+                        resourceName = "ResourceSpawn_Crystal_";
+                    }
+                    else
+                    {
+                        resourceName = "ResourceSpawn_Iron_";
+                    }
                 }
                 CreateSpawnPoint(
                     spawnPointsRoot,
@@ -3824,54 +3905,82 @@ public static class GenerateCorePrefabs2D
         // Tier 1 (0)
         float t1YEnemy = tier1Y + enemySpawnYOffset;
         float t1YOre = tier1Y + resourceSpawnYOffset;
-        SpawnSplitStripSpawns("T1", 1, t1YEnemy, t1YOre, -95f, 45, false);
-        SpawnSplitStripSpawns("T1", 2, t1YEnemy, t1YOre, -45f, 40, false);
-        SpawnSplitStripSpawns("T1", 3, t1YEnemy, t1YOre, -5f, 35, false);
-        SpawnSplitStripSpawns("T1", 4, t1YEnemy, t1YOre, 35f, 35, false);
-        SpawnSplitStripSpawns("T1", 5, t1YEnemy, t1YOre, 75f, 25, false);
+        SpawnSplitStripSpawns("T1", 0, t1YEnemy, t1YOre, -140f, 26, false);
+        SpawnSplitStripSpawns("T1", 1, t1YEnemy, t1YOre, -104f, 32, false);
+        SpawnSplitStripSpawns("T1", 2, t1YEnemy, t1YOre, -64f, 26, false);
+        SpawnSplitStripSpawns("T1", 3, t1YEnemy, t1YOre, -30f, 22, false);
+        SpawnSplitStripSpawns("T1", 4, t1YEnemy, t1YOre, 2f, 24, false);
+        SpawnSplitStripSpawns("T1", 5, t1YEnemy, t1YOre, 36f, 28, false);
+        SpawnSplitStripSpawns("T1", 6, t1YEnemy, t1YOre, 76f, 26, false);
+        SpawnSplitStripSpawns("T1", 7, t1YEnemy, t1YOre, 112f, 24, false);
 
         // Tier 2 (3)
         float t2YEnemy = tier2Y + enemySpawnYOffset;
         float t2YOre = tier2Y + resourceSpawnYOffset;
-        SpawnSplitStripSpawns("T2", 1, t2YEnemy, t2YOre, -110f, 35, false);
-        SpawnSplitStripSpawns("T2", 2, t2YEnemy, t2YOre, -60f, 35, true);   // crystal
-        SpawnSplitStripSpawns("T2", 3, t2YEnemy, t2YOre, -10f, 30, true);
-        SpawnSplitStripSpawns("T2", 4, t2YEnemy, t2YOre, 35f, 25, true);    // crystal
-        SpawnSplitStripSpawns("T2", 5, t2YEnemy, t2YOre, 70f, 40, false);
+        SpawnSplitStripSpawns("T2", 0, t2YEnemy, t2YOre, -136f, 22, false);
+        SpawnSplitStripSpawns("T2", 1, t2YEnemy, t2YOre, -106f, 28, false);
+        SpawnSplitStripSpawns("T2", 2, t2YEnemy, t2YOre, -68f, 24, true);    // crystal
+        SpawnSplitStripSpawns("T2", 3, t2YEnemy, t2YOre, -34f, 22, true);
+        SpawnSplitStripSpawns("T2", 4, t2YEnemy, t2YOre, -2f, 24, false);
+        SpawnSplitStripSpawns("T2", 5, t2YEnemy, t2YOre, 30f, 26, true);     // crystal
+        SpawnSplitStripSpawns("T2", 6, t2YEnemy, t2YOre, 68f, 24, false);
+        SpawnSplitStripSpawns("T2", 7, t2YEnemy, t2YOre, 102f, 22, false);
+        SpawnSplitStripSpawns("T2", 8, t2YEnemy, t2YOre, 126f, 14, false);
 
         // Tier 3 (6)
         float t3YEnemy = tier3Y + enemySpawnYOffset;
         float t3YOre = tier3Y + resourceSpawnYOffset;
-        SpawnSplitStripSpawns("T3", 1, t3YEnemy, t3YOre, -120f, 40, false);
-        SpawnSplitStripSpawns("T3", 2, t3YEnemy, t3YOre, -65f, 35, true);   // crystal
-        SpawnSplitStripSpawns("T3", 3, t3YEnemy, t3YOre, -20f, 30, false);
-        SpawnSplitStripSpawns("T3", 4, t3YEnemy, t3YOre, 25f, 30, true);
-        SpawnSplitStripSpawns("T3", 5, t3YEnemy, t3YOre, 70f, 35, true);    // crystal
+        SpawnSplitStripSpawns("T3", 0, t3YEnemy, t3YOre, -132f, 20, false);
+        SpawnSplitStripSpawns("T3", 1, t3YEnemy, t3YOre, -104f, 26, true);   // crystal
+        SpawnSplitStripSpawns("T3", 2, t3YEnemy, t3YOre, -66f, 22, true);
+        SpawnSplitStripSpawns("T3", 3, t3YEnemy, t3YOre, -36f, 18, false);
+        SpawnSplitStripSpawns("T3", 4, t3YEnemy, t3YOre, -8f, 22, false);
+        SpawnSplitStripSpawns("T3", 5, t3YEnemy, t3YOre, 22f, 20, true);     // crystal
+        SpawnSplitStripSpawns("T3", 6, t3YEnemy, t3YOre, 54f, 22, false);
+        SpawnSplitStripSpawns("T3", 7, t3YEnemy, t3YOre, 86f, 20, true);     // crystal
+        SpawnSplitStripSpawns("T3", 8, t3YEnemy, t3YOre, 112f, 22, false);
 
         // Tier 4 (9)
         float t4YEnemy = tier4Y + enemySpawnYOffset;
         float t4YOre = tier4Y + resourceSpawnYOffset;
-        SpawnSplitStripSpawns("T4", 1, t4YEnemy, t4YOre, -105f, 45, true);  // crystal
-        SpawnSplitStripSpawns("T4", 2, t4YEnemy, t4YOre, -50f, 35, true);
-        SpawnSplitStripSpawns("T4", 3, t4YEnemy, t4YOre, 0f, 35, true);     // crystal
-        SpawnSplitStripSpawns("T4", 4, t4YEnemy, t4YOre, 45f, 25, false);
-        SpawnSplitStripSpawns("T4", 5, t4YEnemy, t4YOre, 80f, 25, false);
+        SpawnSplitStripSpawns("T4", 0, t4YEnemy, t4YOre, -138f, 18, true);   // crystal
+        SpawnSplitStripSpawns("T4", 1, t4YEnemy, t4YOre, -112f, 24, true);
+        SpawnSplitStripSpawns("T4", 2, t4YEnemy, t4YOre, -78f, 20, false);
+        SpawnSplitStripSpawns("T4", 3, t4YEnemy, t4YOre, -50f, 22, true);    // crystal
+        SpawnSplitStripSpawns("T4", 4, t4YEnemy, t4YOre, -18f, 18, false);
+        SpawnSplitStripSpawns("T4", 5, t4YEnemy, t4YOre, 10f, 22, true);     // crystal
+        SpawnSplitStripSpawns("T4", 6, t4YEnemy, t4YOre, 40f, 20, false);
+        SpawnSplitStripSpawns("T4", 7, t4YEnemy, t4YOre, 70f, 22, false);
+        SpawnSplitStripSpawns("T4", 8, t4YEnemy, t4YOre, 102f, 20, true);    // crystal
+        SpawnSplitStripSpawns("T4", 9, t4YEnemy, t4YOre, 126f, 14, false);
 
         // Tier 5 (12) - more exploration up
         float t5YEnemy = tier5Y + enemySpawnYOffset;
         float t5YOre = tier5Y + resourceSpawnYOffset;
-        SpawnSplitStripSpawns("T5", 1, t5YEnemy, t5YOre, -120f, 40, false);
-        SpawnSplitStripSpawns("T5", 2, t5YEnemy, t5YOre, -70f, 35, true);   // crystal
-        SpawnSplitStripSpawns("T5", 3, t5YEnemy, t5YOre, -20f, 35, true);
-        SpawnSplitStripSpawns("T5", 4, t5YEnemy, t5YOre, 30f, 35, true);    // crystal
+        SpawnSplitStripSpawns("T5", 0, t5YEnemy, t5YOre, -130f, 18, false);
+        SpawnSplitStripSpawns("T5", 1, t5YEnemy, t5YOre, -104f, 22, true);   // crystal
+        SpawnSplitStripSpawns("T5", 2, t5YEnemy, t5YOre, -72f, 18, false);
+        SpawnSplitStripSpawns("T5", 3, t5YEnemy, t5YOre, -44f, 20, true);
+        SpawnSplitStripSpawns("T5", 4, t5YEnemy, t5YOre, -14f, 18, false);
+        SpawnSplitStripSpawns("T5", 5, t5YEnemy, t5YOre, 14f, 20, true);     // crystal
+        SpawnSplitStripSpawns("T5", 6, t5YEnemy, t5YOre, 44f, 18, false);
+        SpawnSplitStripSpawns("T5", 7, t5YEnemy, t5YOre, 72f, 20, true);
+        SpawnSplitStripSpawns("T5", 8, t5YEnemy, t5YOre, 102f, 18, false);
+        SpawnSplitStripSpawns("T5", 9, t5YEnemy, t5YOre, 124f, 14, false);
 
         // Tier 6 (15)
         float t6YEnemy = tier6Y + enemySpawnYOffset;
         float t6YOre = tier6Y + resourceSpawnYOffset;
-        SpawnSplitStripSpawns("T6", 1, t6YEnemy, t6YOre, -110f, 35, false);
-        SpawnSplitStripSpawns("T6", 2, t6YEnemy, t6YOre, -55f, 30, true);   // crystal
-        SpawnSplitStripSpawns("T6", 3, t6YEnemy, t6YOre, 0f, 30, true);
-        SpawnSplitStripSpawns("T6", 4, t6YEnemy, t6YOre, 50f, 30, true);    // crystal
+        SpawnSplitStripSpawns("T6", 0, t6YEnemy, t6YOre, -134f, 16, false);
+        SpawnSplitStripSpawns("T6", 1, t6YEnemy, t6YOre, -110f, 22, true);   // crystal
+        SpawnSplitStripSpawns("T6", 2, t6YEnemy, t6YOre, -78f, 18, false);
+        SpawnSplitStripSpawns("T6", 3, t6YEnemy, t6YOre, -50f, 20, true);
+        SpawnSplitStripSpawns("T6", 4, t6YEnemy, t6YOre, -20f, 18, false);
+        SpawnSplitStripSpawns("T6", 5, t6YEnemy, t6YOre, 8f, 20, true);      // crystal
+        SpawnSplitStripSpawns("T6", 6, t6YEnemy, t6YOre, 38f, 18, false);
+        SpawnSplitStripSpawns("T6", 7, t6YEnemy, t6YOre, 66f, 20, true);
+        SpawnSplitStripSpawns("T6", 8, t6YEnemy, t6YOre, 96f, 18, true);
+        SpawnSplitStripSpawns("T6", 9, t6YEnemy, t6YOre, 118f, 16, false);
     }
 
     private static void PositionPlayerAtSpawn()
@@ -3883,13 +3992,25 @@ public static class GenerateCorePrefabs2D
         }
 
         // Spawn away from the tier-1 enemy spawns to avoid immediate contact damage.
-        player.transform.position = new Vector3(0f, -2.2f, 0f);
+        Vector3 spawnPos = new Vector3(0f, -2.2f, 0f);
+        player.transform.position = spawnPos;
         Rigidbody2D rb = player.GetComponent<Rigidbody2D>();
         if (rb != null)
         {
             rb.linearVelocity = Vector2.zero;
             rb.angularVelocity = 0f;
         }
+
+        // Keep the scene's PlayerSpawn aligned with the actual spawn position.
+        // GameManager uses this for respawn at runtime.
+        GameObject spawnGo = FindInScene("PlayerSpawn");
+        if (spawnGo == null)
+        {
+            spawnGo = new GameObject("PlayerSpawn");
+            Undo.RegisterCreatedObjectUndo(spawnGo, "Create PlayerSpawn");
+        }
+        spawnGo.transform.SetParent(null);
+        spawnGo.transform.position = spawnPos;
     }
 
     private static void CreateBlock(Transform parent, Sprite sprite, Vector3 worldPosition, bool isGround)
