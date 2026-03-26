@@ -100,3 +100,78 @@ Tracks scope shifts, design decisions, and implementation changes over time.
 
 ### Maintenance Note
 - This log should be appended whenever new requirements are added, changed, or removed.
+
+---
+
+## 2026-03-26
+
+### Combat: Limited Ammo System (New Mechanic)
+- Added limited-ammo gun loop:
+  - New `PlayerAmmo` component to track current/max ammo and broadcast `OnAmmoChanged`.
+  - `PlayerShooting` now consumes 1 ammo per shot (no ammo = no shot).
+- Ammo tuning:
+  - Default ammo rules shifted to **start at 80 max ammo**, with progression via upgrades.
+- Added ammo pickup pipeline:
+  - New `BulletAmmoPickup` pickup that restores **10 bullets** on collect.
+  - Ammo pickups can drop from enemies (rarer than before).
+  - Ammo pickup SFX support via `GameAudioManager.PlayAmmoPickup`.
+- Bullet interaction rule:
+  - Player bullets **pass through pickups** (ammo/health/oxygen) so shots aren’t destroyed by triggers.
+
+### UI: Ammo + Upgrade Levels (HUD Improvements)
+- HUD now shows ammo in the bottom-right.
+- Added a bottom-right “Upgrades” readout listing current levels of permanent upgrades.
+  - The label was resized and overflow enabled so longer lists (incl. ammo upgrade) are visible.
+
+### Death/Extraction Upgrade Menu (UX + More Options)
+- Death/extraction upgrade menu expanded to support **4 upgrade choices** (Option D added).
+- Added “Starting Ammo” as an upgrade choice (ammo capacity progression).
+- Iterated menu spacing/anchoring so:
+  - “Choose one permanent upgrade…” prompt is not covered.
+  - Option label text sits higher within buttons for multi-line readability.
+
+### Progression: Starting Ammo Upgrade
+- Added `upgrade.start_ammo` (“Starting Ammo”) as a permanent upgrade.
+- Progression rule:
+  - Starting max ammo begins at **80** and increases by **+20 per upgrade level**.
+
+### Balance: Enemy Difficulty Scaling (Harder Mid/High Tiers)
+- Reworked difficulty scaling in `LevelSetupSpawner`:
+  - Increased baseline enemy health/damage multipliers.
+  - Added stronger non-linear ramping so far/high-tier enemies become dramatically tougher.
+  - Increased shooter enemy frequency and adjusted shooter cadence/damage scaling at higher tiers.
+
+### New Ore: Zenithite (Ultra-Rare, Final-Tier Upgrade Gating)
+- Added a new mineable ore: **Zenithite**.
+- Spawn rules:
+  - **10–20% chance** to appear per level (implemented as ~15% default).
+  - **At most 1** Zenithite node can exist in a level at a time.
+  - Prefers higher-difficulty (farther) resource spawn points.
+- Visuals:
+  - Added distinct procedural sprites for Zenithite nodes/items and wired them into `ResourceNode`/`ResourceItem`.
+- HUD:
+  - Zenithite is included in the resources readout.
+- Upgrade gating:
+  - The **final upgrade purchase** of each upgrade tier requires **Zenithite x1**.
+  - Upgrade UIs (both base menu and death menu) display Zenithite cost when the next purchase is the final level.
+
+### Mining: Rebalanced Node Durability + Upgrade Usefulness
+- Mining upgrade feel rebalanced:
+  - Early mining upgrades still require multiple hits (Iron ~5–6 hits).
+  - Final mining upgrade can one-hit common ore.
+  - Rarer ores take longer to mine via higher base HP and existing difficulty scaling multipliers.
+
+### Game Feel: Mining Feedback
+- Mining SFX reliability improved:
+  - `GameAudioManager.PlayMine` now plays non-spatial (2D) so it is always audible.
+
+### Stability/Flow: Extraction Cancel on Death
+- Fixed edge case where extraction could complete on the next run after dying mid-countdown.
+  - `ExtractionSystem` now supports explicit cancellation.
+  - `GameManager.ResetRun()` forces extraction cancel to guarantee death cancels extraction.
+
+### Startup Hitch: Reduced/Hidden Loading Freeze
+- Addressed game-start hitch:
+  - Prevented double-spawn by ensuring only one system triggers initial `SpawnAll`.
+  - Deferred heavy scene-wide scans by a frame in `GameManager`.
+  - Added a lightweight “Loading…” overlay shown during reseed/spawn and hidden afterward.
