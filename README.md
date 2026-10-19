@@ -2,7 +2,7 @@
 
 ## Overview
 
-Frontier Extraction is a 2D pixel-art roguelite where players explore a hostile alien planet to gather resources and upgrade their base.
+Frontier Extraction is a 2D pixel-art roguelite where players explore a hostile alien planet to gather resources used for upgrades.
 
 Players must balance risk and reward: dying causes all collected resources from that run to be lost.
 
@@ -11,7 +11,6 @@ Players must balance risk and reward: dying causes all collected resources from 
 - 2D platforming and combat
 - Resource mining system
 - Roguelite progression (lose resources on death)
-- Base upgrade system
 - Limited ammo + ammo pickups (enemy drops)
 - Ultra-rare ore gating for final upgrade tiers (Zenithite)
 - 3-slot save/load system (with rename/delete from main menu)
