@@ -46,13 +46,8 @@ public class MainMenuStartupScreen : MonoBehaviour
             GameManager.Instance.SetPause(true);
         }
 
-        // Don't let the in-game pause overlay block main-menu interactions.
-        if (HUDController.Instance != null)
-        {
-            HUDController.Instance.SetPauseVisible(false);
-            // Prevent in-game HUD (Extract button / prompts) from carrying over.
-            HUDController.Instance.gameObject.SetActive(false);
-        }
+        // Hide any gameplay HUD/overlays that may still exist from a prior run.
+        HideGameplayUiForMainMenu();
 
         EnsureMenuAudioManagerAndHookButtons();
 
@@ -61,10 +56,6 @@ public class MainMenuStartupScreen : MonoBehaviour
         {
             MainMenuAudioManager.Instance.PlayMusic();
         }
-
-        // Safety: even if HUDController.Instance isn't ready/present yet,
-        // explicitly hide the extracted/interaction prompt UI.
-        SetObjectsActiveByNameIncludingInactive(false, "ExtractButton", "ExtractButtonText", "PromptText", "ExtractionStatusText");
     }
 
     private void Start()
@@ -75,12 +66,10 @@ public class MainMenuStartupScreen : MonoBehaviour
         {
             GameManager.Instance.SetPause(true);
         }
-        // Ensure the in-game pause overlay doesn't block main-menu clicks.
-        if (HUDController.Instance != null)
-        {
-            HUDController.Instance.SetPauseVisible(false);
-            HUDController.Instance.gameObject.SetActive(true);
-        }
+
+        // Re-run cleanup in Start: scene unload order can leave HUD active after Awake.
+        // Important: keep gameplay UI disabled here (do not re-enable HUD on the menu).
+        HideGameplayUiForMainMenu();
 
         startupTime = Time.unscaledTime;
         // Always show the main menu immediately so returning from pause can't get stuck
@@ -101,6 +90,41 @@ public class MainMenuStartupScreen : MonoBehaviour
         ReflowMainMenuButtonsForLoadGame();
 
         EnsureMainMenuThemeVisuals();
+        EnsureMainMenuTitle();
+    }
+
+    /// <summary>
+    /// Disables leftover gameplay UI (HUD, pause, loading overlay, prompts) so it cannot
+    /// remain visible over the main menu after returning from a run.
+    /// </summary>
+    private void HideGameplayUiForMainMenu()
+    {
+        LoadingOverlayUI.Hide();
+
+        HUDController[] huds = Object.FindObjectsByType<HUDController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < huds.Length; i++)
+        {
+            HUDController hud = huds[i];
+            if (hud == null) continue;
+
+            hud.SetPauseVisible(false);
+            hud.gameObject.SetActive(false);
+        }
+
+        DeathUpgradeMenuUI[] deathMenus = Object.FindObjectsByType<DeathUpgradeMenuUI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < deathMenus.Length; i++)
+        {
+            if (deathMenus[i] != null)
+            {
+                deathMenus[i].HideImmediate();
+            }
+        }
+
+        // Safety: even if HUDController.Instance isn't ready/present yet,
+        // explicitly hide the extracted/interaction prompt UI.
+        SetObjectsActiveByNameIncludingInactive(false,
+            "ExtractButton", "ExtractButtonText", "PromptText", "ExtractionStatusText",
+            "PausePanel", "DeathUpgradeRoot", "UpgradeMenuRoot", "HUDCanvas");
     }
 
     private void EnsureNewGameButtonUI()
@@ -506,13 +530,14 @@ public class MainMenuStartupScreen : MonoBehaviour
         }
 
         // Desired centers with 70px-tall buttons: no overlaps and enough vertical room.
+        // Leave space above for the "Frontier Extraction" title.
         // Order: Start/HowTo/Options/NewGame/LoadGame/Quit
-        SetButtonY(buttonsRoot, "StartGameButton", 280f);
-        SetButtonY(buttonsRoot, "HowToButton", 210f);
-        SetButtonY(buttonsRoot, "OptionsButton", 140f);
-        SetButtonY(buttonsRoot, "NewGameButton", 70f);
-        SetButtonY(buttonsRoot, "LoadSavesButton", 0f);
-        SetButtonY(buttonsRoot, "QuitButton", -70f);
+        SetButtonY(buttonsRoot, "StartGameButton", 220f);
+        SetButtonY(buttonsRoot, "HowToButton", 150f);
+        SetButtonY(buttonsRoot, "OptionsButton", 80f);
+        SetButtonY(buttonsRoot, "NewGameButton", 10f);
+        SetButtonY(buttonsRoot, "LoadSavesButton", -60f);
+        SetButtonY(buttonsRoot, "QuitButton", -130f);
 
         // Our load button is created under buttonsRoot too (LoadSavesButton).
         // (Set above)
@@ -1104,6 +1129,7 @@ public class MainMenuStartupScreen : MonoBehaviour
         }
 
         EnsureMainMenuBackgroundImage(mainMenuPanel.transform);
+        EnsureMainMenuTitle();
 
         Transform buttonsRoot = mainMenuPanel.transform.Find("ButtonsRoot");
         if (buttonsRoot != null)
@@ -1117,6 +1143,58 @@ public class MainMenuStartupScreen : MonoBehaviour
         if (howToT != null) ApplyThemeToButtonsIn(howToT);
         Transform optionsT = mainMenuPanel.transform.Find("OptionsPanel");
         if (optionsT != null) ApplyThemeToButtonsIn(optionsT);
+    }
+
+    private void EnsureMainMenuTitle()
+    {
+        if (mainMenuPanel == null) return;
+
+        Transform existing = mainMenuPanel.transform.Find("GameTitle");
+        GameObject titleGO;
+        Text title;
+        if (existing != null && existing.GetComponent<Text>() != null)
+        {
+            titleGO = existing.gameObject;
+            title = existing.GetComponent<Text>();
+        }
+        else
+        {
+            titleGO = new GameObject("GameTitle", typeof(RectTransform), typeof(Text));
+            titleGO.transform.SetParent(mainMenuPanel.transform, false);
+            title = titleGO.GetComponent<Text>();
+        }
+
+        RectTransform rt = titleGO.GetComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(0f, 340f);
+        rt.sizeDelta = new Vector2(900f, 100f);
+
+        title.font = GetSafeFont();
+        title.fontSize = 56;
+        title.fontStyle = FontStyle.Bold;
+        title.color = new Color(0.92f, 0.98f, 1f, 1f);
+        title.alignment = TextAnchor.MiddleCenter;
+        title.text = "Frontier Extraction";
+        title.raycastTarget = false;
+
+        Outline outline = title.GetComponent<Outline>();
+        if (outline == null) outline = titleGO.AddComponent<Outline>();
+        outline.effectColor = new Color(0f, 0f, 0f, 0.95f);
+        outline.effectDistance = new Vector2(2f, -2f);
+        outline.useGraphicAlpha = true;
+
+        // Keep title above the themed background, below modal panels.
+        Transform bg = mainMenuPanel.transform.Find("ThemeBackground");
+        if (bg != null)
+        {
+            titleGO.transform.SetSiblingIndex(bg.GetSiblingIndex() + 1);
+        }
+        else
+        {
+            titleGO.transform.SetAsFirstSibling();
+        }
     }
 
     private void EnsureMainMenuBackgroundImage(Transform parent)

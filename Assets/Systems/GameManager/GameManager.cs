@@ -72,6 +72,9 @@ public class GameManager : MonoBehaviour
         // Main-menu scene should never instantiate enemies/bullets.
         if (string.IsNullOrWhiteSpace(scene.name) || !scene.name.StartsWith("Level_"))
         {
+            // Returning to the menu (or any non-level scene): hide leftover gameplay UI
+            // and clear DDOL-spawned world objects so they cannot remain on screen.
+            CleanupForNonGameplayScene();
             return;
         }
 
@@ -349,9 +352,40 @@ public class GameManager : MonoBehaviour
             GameAudioManager.Instance.PlayPauseToggle();
         }
 
+        // Never show the in-game pause overlay on the main menu (or other non-level scenes).
+        string activeScene = SceneManager.GetActiveScene().name;
+        bool isGameplayScene = !string.IsNullOrWhiteSpace(activeScene) && activeScene.StartsWith("Level_");
         if (HUDController.Instance != null)
         {
-            HUDController.Instance.SetPauseVisible(pauseState);
+            HUDController.Instance.SetPauseVisible(isGameplayScene && pauseState);
+        }
+    }
+
+    private void CleanupForNonGameplayScene()
+    {
+        LoadingOverlayUI.Hide();
+        waitingForDeathUpgradeSelection = false;
+
+        if (deathUpgradeMenu != null)
+        {
+            deathUpgradeMenu.HideImmediate();
+        }
+
+        HUDController[] huds = FindObjectsByType<HUDController>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < huds.Length; i++)
+        {
+            HUDController hud = huds[i];
+            if (hud == null) continue;
+            hud.SetPauseVisible(false);
+            hud.gameObject.SetActive(false);
+        }
+
+        // GameSystems is DontDestroyOnLoad; clear enemies/resources spawned under it
+        // so they do not remain visible behind the main menu.
+        LevelSetupSpawner spawner = FindAnyObjectByType<LevelSetupSpawner>();
+        if (spawner != null)
+        {
+            spawner.ClearSpawned();
         }
     }
 
