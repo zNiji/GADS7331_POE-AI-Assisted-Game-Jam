@@ -115,13 +115,17 @@ public static class SetupMainMenu
         // Build startup content
         EnsureTextChild(startupPanel.transform, "StartupText", "Frontier Extraction\nPress Any Key", new Vector2(0f, 20f), 44);
 
+        // Game title on the main menu (also created at runtime by MainMenuStartupScreen).
+        EnsureTextChild(mainMenuPanel.transform, "GameTitle", "Frontier Extraction", new Vector2(0f, 340f), 56);
+
         // Build main menu buttons
         GameObject buttonsRoot = EnsureChild(mainMenuPanel.transform, "ButtonsRoot");
         // Anchor buttons around the vertical center so they stay visible on different resolutions.
-        EnsureButton(buttonsRoot.transform, "StartGameButton", "Start Game", new Vector2(0f, 140f), new UnityAction(startup.StartGame));
-        EnsureButton(buttonsRoot.transform, "HowToButton", "How To Play", new Vector2(0f, 70f), new UnityAction(uiController.ShowHowTo));
-        EnsureButton(buttonsRoot.transform, "OptionsButton", "Options", new Vector2(0f, 0f), new UnityAction(uiController.ShowOptions));
-        EnsureButton(buttonsRoot.transform, "QuitButton", "Quit", new Vector2(0f, -90f), new UnityAction(startup.QuitGame));
+        // Leave room above for the game title.
+        EnsureButton(buttonsRoot.transform, "StartGameButton", "Start Game", new Vector2(0f, 220f), new UnityAction(startup.StartGame));
+        EnsureButton(buttonsRoot.transform, "HowToButton", "How To Play", new Vector2(0f, 150f), new UnityAction(uiController.ShowHowTo));
+        EnsureButton(buttonsRoot.transform, "OptionsButton", "Options", new Vector2(0f, 80f), new UnityAction(uiController.ShowOptions));
+        EnsureButton(buttonsRoot.transform, "QuitButton", "Quit", new Vector2(0f, -130f), new UnityAction(startup.QuitGame));
 
         // HowTo + Options panels
         GameObject howTo = EnsurePanel(mainMenuPanel.transform, "HowToPanel", new Vector2(0f, -10f), new Vector2(900f, 600f));

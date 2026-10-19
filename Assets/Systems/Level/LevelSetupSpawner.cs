@@ -111,6 +111,12 @@ public class LevelSetupSpawner : MonoBehaviour
         }
     }
 
+    public void ClearSpawned()
+    {
+        ClearChildren(spawnedEnemiesRoot);
+        ClearChildren(spawnedResourcesRoot);
+    }
+
     public void SpawnAll()
     {
         groundFloorIronTarget = Mathf.Clamp(Random.Range(groundFloorIronNodesMin, groundFloorIronNodesMax + 1), 0, 999);
@@ -119,8 +125,7 @@ public class LevelSetupSpawner : MonoBehaviour
 
         if (clearSpawnedOnRespawn)
         {
-            ClearChildren(spawnedEnemiesRoot);
-            ClearChildren(spawnedResourcesRoot);
+            ClearSpawned();
         }
 
         SpawnByType(SpawnPoint2D.SpawnType.Enemy, enemyPrefab, spawnedEnemiesRoot);

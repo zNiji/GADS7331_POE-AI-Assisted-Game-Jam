@@ -333,6 +333,14 @@ public class PauseMenuReturnToMainMenuUI : MonoBehaviour
             GameManager.Instance.SetPause(false);
         }
 
+        // Hide gameplay HUD before the scene swap so it cannot flash/linger on the menu.
+        LoadingOverlayUI.Hide();
+        if (HUDController.Instance != null)
+        {
+            HUDController.Instance.SetPauseVisible(false);
+            HUDController.Instance.gameObject.SetActive(false);
+        }
+
         if (GameAudioManager.Instance != null)
         {
             GameAudioManager.Instance.PlayMenuClick();
